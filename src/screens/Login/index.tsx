@@ -43,6 +43,7 @@ const Login = () => {
         keyboardType="numeric"
         value={password}
         onChangeText={setPassword}
+        secureTextEntry
       />
 
       <TouchableOpacity
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     fontSize: 20 , 
     marginBottom:25,
     color:'#EFB719'
-  }
+  },
 });
 
 export default Login;
