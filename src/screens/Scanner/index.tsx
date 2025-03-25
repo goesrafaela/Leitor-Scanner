@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+} from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native"; // Importação do useNavigation
 
@@ -8,6 +15,10 @@ const Scanner = () => {
   const [isModalVisible, setModalVisible] = useState(false); // Visibilidade do modal
   const [barcodeData, setBarcodeData] = useState(null); // Dados do código de barras
   const [permission, requestPermission] = useCameraPermissions(); // Permissões da câmera
+  const [isManualInputModalVisible, setManualInputModalVisible] =
+    useState(false);
+  const [manualBarcode, setManualBarcode] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Verifica se as permissões foram concedidas
   if (!permission) {
@@ -34,6 +45,18 @@ const Scanner = () => {
     setModalVisible(true); // Exibe o modal
   };
 
+  const handleManualInput = () => {
+    setManualInputModalVisible(false);
+    setBarcodeData(manualBarcode);
+    setShowSuccessModal(true);
+
+    // Auto close success modal after 2 seconds
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      setManualBarcode("");
+    }, 2000);
+  };
+
   // Função para voltar à tela inicial
   const goToHome = () => {
     navigation.navigate("Home"); // Navega para a tela "Home"
@@ -52,21 +75,31 @@ const Scanner = () => {
         />
       </View>
 
-      {/* Botão para voltar à tela inicial */}
-      <TouchableOpacity style={styles.homeButton} onPress={goToHome}>
-        <Text style={styles.homeButtonText}>Voltar para Home</Text>
-      </TouchableOpacity>
+      {/* Botões de ação */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setManualInputModalVisible(true)}
+        >
+          <Text style={styles.buttonText}>Entrada Manual</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={goToHome}>
+          <Text style={styles.buttonText}>Voltar para Home</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Modal para exibir as informações do código de barras */}
       <Modal
-        visible={isModalVisible} // Controla a visibilidade do modal
-        animationType="slide" // Animação de entrada/saída
-        transparent={true} // Fundo transparente
-        onRequestClose={() => setModalVisible(false)} // Fecha o modal ao pressionar o botão de voltar (Android)
+        visible={isModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalText}>Código de Barras: {barcodeData}</Text>
+            <Text style={styles.modalText}>
+              Código de Barras: {barcodeData}
+            </Text>
             <TouchableOpacity
               style={styles.modalButton}
               onPress={() => setModalVisible(false)}
@@ -76,11 +109,100 @@ const Scanner = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Modal para entrada manual */}
+      <Modal
+        visible={isManualInputModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setManualInputModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Digite o código de barras</Text>
+            <TextInput
+              style={styles.input}
+              value={manualBarcode}
+              onChangeText={setManualBarcode}
+              placeholder="Digite o código de barras"
+              keyboardType="numeric"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setManualInputModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={handleManualInput}
+              >
+                <Text style={styles.modalButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de sucesso */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Sucesso!</Text>
+            <Text style={styles.modalText}>
+              Código de barras: {manualBarcode}
+            </Text>
+            <Text style={styles.modalText}>Cadastrado com sucesso!</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "80%",
+    marginTop: 20,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: "#EF4219",
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 20,
+    color: "#EF4219",
+    fontWeight: "bold",
+  },
+  input: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  cancelButton: {
+    backgroundColor: "#666",
+  },
   container: {
     flexDirection: "column",
     alignItems: "center",
