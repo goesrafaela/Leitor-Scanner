@@ -19,7 +19,14 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.leitorcodbarras.app",
+      "versionCode": 1,
+      "minSdkVersion": 21,
+      "permissions": [
+        "CAMERA"
+      ],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"

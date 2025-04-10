@@ -7,14 +7,16 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  Image,
 } from "react-native";
+import iconImage from "../../img/img5.png";
 
 const Home = () => {
   const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
-      <Text style={{ fontSize: 20 }}>Tela de home</Text>
+      <Image source={iconImage} style={styles.icon} resizeMode="contain" />
       <TouchableOpacity
         style={styles.button}
         onPress={() => navigation.navigate("Scanner")}
@@ -39,10 +41,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flex: 1,
   },
+  icon: {
+    width: 120,
+    height: 120,
+    marginBottom: 50,
+  },
+  txtHome: {
+    fontSize: 24,
+    marginBottom: 25,
+    color: "#282abd",
+    fontWeight: "bold",
+  },
   button: {
-    width: "80%",
+    width: "50%",
     padding: 8,
-    backgroundColor: "#EF4219",
+    backgroundColor: "#282abd",
     marginTop: 12,
     borderRadius: 8,
   },
@@ -66,7 +79,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     marginBottom: 20,
-    color: "#EF4219",
+    color: "#87857d",
     fontWeight: "bold",
   },
   modalText: {

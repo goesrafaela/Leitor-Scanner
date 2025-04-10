@@ -64,8 +64,6 @@ const Scanner = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.txtHome}>Scanner</Text>
-
       {/* Área da câmera */}
       <View style={styles.cameraContainer}>
         <CameraView
@@ -176,7 +174,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     padding: 10,
-    backgroundColor: "#EF4219",
+    backgroundColor: "#282abd",
     borderRadius: 8,
     marginHorizontal: 5,
     alignItems: "center",
@@ -184,13 +182,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     marginBottom: 20,
-    color: "#EF4219",
+    color: "#282abd",
     fontWeight: "bold",
   },
   input: {
-    width: "100%",
+    width: "80%",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#282abd",
     borderRadius: 8,
     padding: 10,
     marginBottom: 20,
@@ -201,7 +199,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   cancelButton: {
-    backgroundColor: "#666",
+    backgroundColor: "#6c68b5",
   },
   container: {
     flexDirection: "column",
@@ -231,7 +229,7 @@ const styles = StyleSheet.create({
   },
   button: {
     padding: 10,
-    backgroundColor: "#EF4219",
+    backgroundColor: "#282abd",
     borderRadius: 8,
     alignItems: "center",
   },
@@ -241,7 +239,7 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     padding: 10,
-    backgroundColor: "#EF4219",
+    backgroundColor: "#282abd",
     borderRadius: 8,
     alignItems: "center",
     marginTop: 20,
@@ -269,7 +267,7 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     padding: 10,
-    backgroundColor: "#EF4219",
+    backgroundColor: "#282abd",
     borderRadius: 8,
   },
   modalButtonText: {
