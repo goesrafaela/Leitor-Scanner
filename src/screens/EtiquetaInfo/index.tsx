@@ -119,6 +119,48 @@ const EtiquetaInfo = () => {
           </View>
         </View>
 
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Status:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>
+                {etiquetaData.status === "3"
+                  ? "PROCESSANDO"
+                  : etiquetaData.status === "1"
+                  ? "APROVADO"
+                  : "PENDENTE"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Origem:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.origem}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Depósito Atual:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.depositoAtual}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Localização:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.descricaoDeposito}</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.buttonContainer}>
           {isEditing ? (
             <>
@@ -136,21 +178,23 @@ const EtiquetaInfo = () => {
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.editButton]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Text style={styles.buttonText}>Editar</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.backButton]}
+                onPress={() =>
+                  navigation.navigate("Scanner", { userName: userUser })
+                }
+              >
+                <Text style={styles.buttonText}>Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.editButton]}
+                onPress={handleSave}
+              >
+                <Text style={styles.buttonText}>Enviar</Text>
+              </TouchableOpacity>
+            </>
           )}
-          <TouchableOpacity
-            style={[styles.button, styles.backButton]}
-            onPress={() =>
-              navigation.navigate("Scanner", { userName: userUser })
-            }
-          >
-            <Text style={styles.buttonText}>Voltar</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -161,15 +205,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+    justifyContent: "center",
   },
   content: {
     flex: 1,
     padding: 20,
+    justifyContent: "center",
+    maxHeight: "80%",
   },
   row: {
-    marginBottom: 15,
+    marginBottom: 25,
+    paddingHorizontal: 10,
   },
   field: {
+    marginVertical: 5,
     backgroundColor: "white",
     borderRadius: 8,
     padding: 10,
@@ -226,17 +275,17 @@ const styles = StyleSheet.create({
   editButton: {
     backgroundColor: "#4169E1",
     flex: 1,
-    marginRight: 10,
+    marginLeft: 10,
   },
   saveButton: {
     backgroundColor: "#32CD32",
     flex: 1,
-    marginRight: 10,
+    marginLeft: 10,
   },
   cancelButton: {
     backgroundColor: "#FF6347",
     flex: 1,
-    marginRight: 10,
+    marginLeft: 10,
   },
   backButton: {
     backgroundColor: "#282abd",

@@ -14,15 +14,22 @@ import { RootStackNavigationProp } from "../../types/navigation";
 
 const Scanner = ({ route }) => {
   const navigation = useNavigation<RootStackNavigationProp>();
-  const [isModalVisible, setModalVisible] = useState(false);
+  const [isEtiquetaModalVisible, setEtiquetaModalVisible] = useState(false);
   const [barcodeData, setBarcodeData] = useState(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [isManualInputModalVisible, setManualInputModalVisible] =
     useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedBarcode, setEditedBarcode] = useState("");
+
+  // Função que simula a obtenção automática da localização
+  const getAutomaticLocation = () => {
+    return {
+      endereco: "A001",
+      descricaoEndereco: "CORREDOR [ A ] PRATE",
+    };
+  };
 
   // Dados fictícios para simular a API
   const [etiquetaData, setEtiquetaData] = useState({
@@ -69,13 +76,8 @@ const Scanner = ({ route }) => {
   }
   const handleBarcodeScan = ({ data }: BarcodeData) => {
     if (data) {
-      navigation.navigate("EtiquetaInfo", {
-        etiquetaData: {
-          ...etiquetaData,
-          etiqueta: data,
-        },
-        userUser: route.params?.userName,
-      });
+      setBarcodeData(data);
+      setEtiquetaModalVisible(true);
     }
   };
 
@@ -86,20 +88,23 @@ const Scanner = ({ route }) => {
     }
     setBarcodeData(manualBarcode);
     setManualInputModalVisible(false);
-    setModalVisible(true);
+    setEtiquetaModalVisible(true);
   };
 
-  const handleConfirm = () => {
+  const handleEtiquetaConfirm = () => {
     const barcode = barcodeData || manualBarcode;
     if (!barcode) {
       Alert.alert("Erro", "Nenhum código de barras foi lido ou digitado.");
       return;
     }
-    setModalVisible(false);
+    const automaticLocation = getAutomaticLocation();
+    setEtiquetaModalVisible(false);
     navigation.navigate("EtiquetaInfo", {
       etiquetaData: {
         ...etiquetaData,
         etiqueta: barcode,
+        endereco: automaticLocation.endereco,
+        descricaoEndereco: automaticLocation.descricaoEndereco,
       },
       userUser: route.params?.userName,
     });
@@ -130,7 +135,11 @@ const Scanner = ({ route }) => {
         <CameraView
           style={styles.camera}
           facing="back" // Define a câmera traseira como padrão
-          onBarcodeScanned={isModalVisible ? undefined : handleBarcodeScan} // Escaneia o código de barras
+          onBarcodeScanned={
+            isEtiquetaModalVisible || isManualInputModalVisible
+              ? undefined
+              : handleBarcodeScan
+          } // Escaneia o código de barras
         />
       </View>
 
@@ -182,16 +191,16 @@ const Scanner = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Modal de confirmação */}
+      {/* Modal de Etiqueta */}
       <Modal
-        visible={isModalVisible}
+        visible={isEtiquetaModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => setEtiquetaModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirmar Código</Text>
+            <Text style={styles.modalTitle}>Confirmar Etiqueta</Text>
             {isEditing ? (
               <TextInput
                 style={styles.input}
@@ -210,7 +219,7 @@ const Scanner = ({ route }) => {
                 style={[styles.button, styles.cancelButton]}
                 onPress={() => {
                   setIsEditing(false);
-                  setModalVisible(false);
+                  setEtiquetaModalVisible(false);
                 }}
               >
                 <Text style={styles.buttonText}>Cancelar</Text>
@@ -238,7 +247,7 @@ const Scanner = ({ route }) => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.confirmButton]}
-                    onPress={handleConfirm}
+                    onPress={handleEtiquetaConfirm}
                   >
                     <Text style={styles.buttonText}>Confirmar</Text>
                   </TouchableOpacity>
