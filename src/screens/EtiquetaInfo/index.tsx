@@ -161,6 +161,45 @@ const EtiquetaInfo = () => {
           </View>
         </View>
 
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Material:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.material}</Text>
+              <Text style={styles.valueDesc}>
+                {etiquetaData.descricaoMaterial}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Operador:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.operador}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Data:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.data}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Hora:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.hora}</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.buttonContainer}>
           {isEditing ? (
             <>
@@ -209,83 +248,83 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
-    justifyContent: "center",
-    maxHeight: "80%",
+    padding: 10,
+    paddingTop: 40,
   },
   row: {
-    marginBottom: 25,
-    paddingHorizontal: 10,
+    marginBottom: 8,
+    paddingHorizontal: 5,
   },
   field: {
-    marginVertical: 5,
+    marginVertical: 2,
     backgroundColor: "white",
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 6,
+    padding: 8,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
-    marginBottom: 5,
+    marginBottom: 2,
   },
   inputContainer: {
-    marginTop: 2,
+    marginTop: 1,
   },
   value: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#282abd",
     fontWeight: "bold",
   },
   valueDesc: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#333",
-    marginTop: 2,
+    marginTop: 1,
   },
   button: {
     backgroundColor: "#282abd",
-    padding: 15,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 10,
   },
   buttonText: {
     color: "white",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
   },
   input: {
     borderWidth: 1,
     borderColor: "#282abd",
     borderRadius: 4,
-    padding: 8,
+    padding: 6,
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: 20,
+    marginTop: 10,
+    paddingHorizontal: 5,
   },
   editButton: {
     backgroundColor: "#4169E1",
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 5,
   },
   saveButton: {
     backgroundColor: "#32CD32",
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 5,
   },
   cancelButton: {
     backgroundColor: "#FF6347",
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 5,
   },
   backButton: {
     backgroundColor: "#282abd",

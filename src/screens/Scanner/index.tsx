@@ -235,7 +235,7 @@ const Scanner = ({ route }) => {
                   <Text style={styles.buttonText}>Salvar</Text>
                 </TouchableOpacity>
               ) : (
-                <>
+                <View>
                   <TouchableOpacity
                     style={[styles.button, styles.editButton]}
                     onPress={() => {
@@ -251,7 +251,22 @@ const Scanner = ({ route }) => {
                   >
                     <Text style={styles.buttonText}>Confirmar</Text>
                   </TouchableOpacity>
-                </>
+                  <TouchableOpacity
+                    style={[styles.button, styles.approvalButton]}
+                    onPress={() => {
+                      setEtiquetaModalVisible(false);
+                      navigation.navigate("AprovacaoInfo", {
+                        etiquetaData: {
+                          ...etiquetaData,
+                          etiqueta: barcodeData || manualBarcode,
+                        },
+                        userUser: route.params?.userName,
+                      });
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Verificar Aprovação</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
@@ -295,14 +310,27 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 8,
+    flexDirection: "column",
+    alignItems: "stretch",
     width: "100%",
     marginTop: 20,
   },
   cancelButton: {
     backgroundColor: "#6c68b5",
-    marginRight: 10,
+    marginBottom: 8,
+  },
+  editButton: {
+    backgroundColor: "#4169E1",
+    marginBottom: 8,
+    marginRight: 8,
+  },
+  confirmButton: {
+    backgroundColor: "#282abd",
+    marginBottom: 8,
+  },
+  approvalButton: {
+    backgroundColor: "#282abd",
   },
   container: {
     flexDirection: "column",
