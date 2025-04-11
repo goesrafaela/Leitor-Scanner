@@ -6,19 +6,43 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Alert,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useNavigation } from "@react-navigation/native"; // Importação do useNavigation
+import { useNavigation } from "@react-navigation/native";
+import { RootStackNavigationProp } from "../../types/navigation";
 
-const Scanner = () => {
-  const navigation = useNavigation(); // Hook para navegação
-  const [isModalVisible, setModalVisible] = useState(false); // Visibilidade do modal
-  const [barcodeData, setBarcodeData] = useState(null); // Dados do código de barras
-  const [permission, requestPermission] = useCameraPermissions(); // Permissões da câmera
+const Scanner = ({ route }) => {
+  const navigation = useNavigation<RootStackNavigationProp>();
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [barcodeData, setBarcodeData] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [isManualInputModalVisible, setManualInputModalVisible] =
     useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBarcode, setEditedBarcode] = useState("");
+
+  // Dados fictícios para simular a API
+  const [etiquetaData, setEtiquetaData] = useState({
+    endereco: "A001",
+    deposito: "04",
+    etiqueta: "R00253",
+    material: "STR3004376",
+    operador: "02",
+    status: "3",
+    data: new Date().toLocaleDateString(),
+    hora: new Date().toLocaleTimeString(),
+    descricaoMaterial: "HOLDER PORTA DIANTEIRA LE 9.0",
+    descricaoDeposito: "Almoxarifado",
+    descricaoEndereco: "CORREDOR [ A ] PRATE",
+    origem: "11",
+    depositoAtual: "09",
+    op: "32487",
+    qm: "0",
+    qtde: "100.0000",
+  });
 
   // Verifica se as permissões foram concedidas
   if (!permission) {
@@ -40,26 +64,63 @@ const Scanner = () => {
   }
 
   // Função chamada quando um código de barras é escaneado
-  const handleBarcodeScan = ({ data }) => {
-    setBarcodeData(data);
-    setModalVisible(true); // Exibe o modal
+  interface BarcodeData {
+    data: string;
+  }
+  const handleBarcodeScan = ({ data }: BarcodeData) => {
+    if (data) {
+      navigation.navigate("EtiquetaInfo", {
+        etiquetaData: {
+          ...etiquetaData,
+          etiqueta: data,
+        },
+        userUser: route.params?.userName,
+      });
+    }
   };
 
   const handleManualInput = () => {
-    setManualInputModalVisible(false);
+    if (manualBarcode.trim() === "") {
+      Alert.alert("Erro", "Por favor, digite um código de barras válido.");
+      return;
+    }
     setBarcodeData(manualBarcode);
-    setShowSuccessModal(true);
+    setManualInputModalVisible(false);
+    setModalVisible(true);
+  };
 
-    // Auto close success modal after 2 seconds
-    setTimeout(() => {
-      setShowSuccessModal(false);
-      setManualBarcode("");
-    }, 2000);
+  const handleConfirm = () => {
+    const barcode = barcodeData || manualBarcode;
+    if (!barcode) {
+      Alert.alert("Erro", "Nenhum código de barras foi lido ou digitado.");
+      return;
+    }
+    setModalVisible(false);
+    navigation.navigate("EtiquetaInfo", {
+      etiquetaData: {
+        ...etiquetaData,
+        etiqueta: barcode,
+      },
+      userUser: route.params?.userName,
+    });
+    setBarcodeData(null);
+    setManualBarcode("");
   };
 
   // Função para voltar à tela inicial
   const goToHome = () => {
-    navigation.navigate("Home"); // Navega para a tela "Home"
+    navigation.navigate("Home", { userUser: route.params?.userName }); // Navega para a tela "Home" mantendo o usuário
+  };
+
+  // Garante que o userUser seja passado em todas as navegações
+  const navigateWithUser = (
+    screen: keyof RootStackParamList,
+    params: any = {}
+  ) => {
+    navigation.navigate(screen, {
+      ...params,
+      userUser: route.params?.userName,
+    });
   };
 
   return (
@@ -86,38 +147,16 @@ const Scanner = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Modal para exibir as informações do código de barras */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalText}>
-              Código de Barras: {barcodeData}
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.modalButtonText}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal para entrada manual */}
+      {/* Modal de entrada manual */}
       <Modal
         visible={isManualInputModalVisible}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setManualInputModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Digite o código de barras</Text>
+            <Text style={styles.modalTitle}>Entrada Manual de Etiqueta</Text>
             <TextInput
               style={styles.input}
               value={manualBarcode}
@@ -127,36 +166,85 @@ const Scanner = () => {
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.button, styles.cancelButton]}
                 onPress={() => setManualInputModalVisible(false)}
               >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
+                <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalButton}
+                style={[styles.button, styles.confirmButton]}
                 onPress={handleManualInput}
               >
-                <Text style={styles.modalButtonText}>Confirmar</Text>
+                <Text style={styles.buttonText}>Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Modal de sucesso */}
+      {/* Modal de confirmação */}
       <Modal
-        visible={showSuccessModal}
+        visible={isModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
+        onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Sucesso!</Text>
-            <Text style={styles.modalText}>
-              Código de barras: {manualBarcode}
-            </Text>
-            <Text style={styles.modalText}>Cadastrado com sucesso!</Text>
+            <Text style={styles.modalTitle}>Confirmar Código</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.input}
+                value={editedBarcode}
+                onChangeText={setEditedBarcode}
+                placeholder="Digite o código de barras"
+                keyboardType="numeric"
+              />
+            ) : (
+              <Text style={styles.modalText}>
+                Código lido: {barcodeData || manualBarcode}
+              </Text>
+            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setIsEditing(false);
+                  setModalVisible(false);
+                }}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+              {isEditing ? (
+                <TouchableOpacity
+                  style={[styles.button, styles.confirmButton]}
+                  onPress={() => {
+                    setBarcodeData(editedBarcode);
+                    setIsEditing(false);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Salvar</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[styles.button, styles.editButton]}
+                    onPress={() => {
+                      setEditedBarcode(barcodeData || manualBarcode);
+                      setIsEditing(true);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Editar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.confirmButton]}
+                    onPress={handleConfirm}
+                  >
+                    <Text style={styles.buttonText}>Confirmar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -167,17 +255,20 @@ const Scanner = () => {
 const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    width: "80%",
-    marginTop: 20,
+    justifyContent: "space-around",
+    padding: 20,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
   },
   actionButton: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: "#282abd",
+    backgroundColor: "#4169E1",
+    padding: 15,
     borderRadius: 8,
-    marginHorizontal: 5,
-    alignItems: "center",
+    width: "45%",
+    elevation: 3,
   },
   modalTitle: {
     fontSize: 18,
@@ -186,20 +277,23 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   input: {
-    width: "80%",
+    width: "100%",
     borderWidth: 1,
     borderColor: "#282abd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
+    borderRadius: 4,
+    padding: 8,
+    backgroundColor: "white",
+    color: "#000",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
+    marginTop: 20,
   },
   cancelButton: {
     backgroundColor: "#6c68b5",
+    marginRight: 10,
   },
   container: {
     flexDirection: "column",
@@ -252,27 +346,72 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fundo escurecido
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: "#6495ED",
     padding: 20,
     borderRadius: 10,
-    alignItems: "center",
-    width: "80%",
+    width: "90%",
+    maxHeight: "90%",
+    marginVertical: 20,
+    elevation: 5,
   },
-  modalText: {
+  modalRow: {
+    flexDirection: "column",
+    marginBottom: 15,
+    width: "100%",
+  },
+  modalField: {
+    width: "100%",
+    marginBottom: 10,
+  },
+  modalLabel: {
+    fontSize: 16,
+    color: "white",
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+  modalValue: {
     fontSize: 18,
-    marginBottom: 20,
+    color: "white",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  modalValueDesc: {
+    fontSize: 14,
+    color: "white",
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  modalInputContainer: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 6,
+    padding: 12,
   },
   modalButton: {
-    padding: 10,
-    backgroundColor: "#282abd",
+    padding: 15,
+    backgroundColor: "#4169E1",
     borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+    width: "100%",
   },
   modalButtonText: {
     color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  editButton: {
+    backgroundColor: "#4169E1",
+    marginRight: 10,
+  },
+  modalText: {
     fontSize: 16,
+    color: "white",
+    marginBottom: 10,
   },
 });
 

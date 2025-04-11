@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { RootStackNavigationProp } from "../../types/navigation";
 import {
   View,
   Text,
@@ -12,17 +13,17 @@ import {
 import iconImage from "../../img/img5.png";
 
 const Login = () => {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
+  const navigation = useNavigation<RootStackNavigationProp>();
+  const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    if (email === "" || password === "") {
+    if (user === "" || password === "") {
       Alert.alert("Atenção", "Por favor, preencha todos os campos.");
     } else {
       /*Requisição para o servidor com os dados do usuário*/
 
-      navigation.navigate("Home");
+      navigation.navigate("Home", { userUser: user });
     }
   };
 
@@ -34,9 +35,9 @@ const Login = () => {
 
         <TextInput
           style={styles.input}
-          placeholder="Digite seu email"
-          value={email}
-          onChangeText={setEmail}
+          placeholder="Digite seu usuário"
+          value={user}
+          onChangeText={setUser}
           keyboardType="email-address"
         />
         <TextInput

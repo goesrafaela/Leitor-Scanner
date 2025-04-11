@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { RootStackNavigationProp } from "../../types/navigation";
 import {
   View,
   Text,
@@ -11,15 +12,17 @@ import {
 } from "react-native";
 import iconImage from "../../img/img5.png";
 
-const Home = () => {
-  const navigation = useNavigation();
+const Home = ({ route }) => {
+  const navigation = useNavigation<RootStackNavigationProp>();
+  const userName = route.params?.userUser;
 
   return (
     <View style={styles.container}>
       <Image source={iconImage} style={styles.icon} resizeMode="contain" />
+      <Text style={styles.txtHome}>Bem vindo, {userName}</Text>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate("Scanner")}
+        onPress={() => navigation.navigate("Scanner", { userName: userName })}
       >
         <Text style={styles.txtButton}>Scanner</Text>
       </TouchableOpacity>
