@@ -171,7 +171,7 @@ const Scanner = ({ route }) => {
               value={manualBarcode}
               onChangeText={setManualBarcode}
               placeholder="Digite o código de barras"
-              keyboardType="numeric"
+              keyboardType="default"
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -243,7 +243,7 @@ const Scanner = ({ route }) => {
                       setIsEditing(true);
                     }}
                   >
-                    <Text style={styles.buttonText}>Editar</Text>
+                    <Text style={styles.buttonText}>Editar código</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, styles.confirmButton]}
@@ -310,10 +310,12 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   modalButtons: {
-    gap: 8,
+    gap: 5,
     flexDirection: "column",
     alignItems: "stretch",
     width: "100%",
+    marginBottom: 16,
+
     marginTop: 20,
   },
   cancelButton: {
@@ -322,12 +324,13 @@ const styles = StyleSheet.create({
   },
   editButton: {
     backgroundColor: "#4169E1",
-    marginBottom: 8,
-    marginRight: 8,
+    marginBottom: 16,
+    width: "100%",
   },
   confirmButton: {
     backgroundColor: "#282abd",
-    marginBottom: 8,
+    marginTop: 8, // Adicionando margem superior para separaçã
+    marginBottom: 16,
   },
   approvalButton: {
     backgroundColor: "#282abd",
@@ -443,7 +446,8 @@ const styles = StyleSheet.create({
   },
   editButton: {
     backgroundColor: "#4169E1",
-    marginRight: 10,
+    marginBottom: 16,
+    width: "100%",
   },
   modalText: {
     fontSize: 16,
