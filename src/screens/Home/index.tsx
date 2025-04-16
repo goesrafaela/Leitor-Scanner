@@ -22,9 +22,26 @@ const Home = ({ route }) => {
       <Text style={styles.txtHome}>Bem vindo, {userName}</Text>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => navigation.navigate("Scanner", { userName: userName })}
+        onPress={() =>
+          navigation.navigate("Scanner", {
+            userUser: userName,
+            scanType: "entrada",
+          })
+        }
       >
-        <Text style={styles.txtButton}>Scanner</Text>
+        <Text style={styles.txtButton}>Entrada</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() =>
+          navigation.navigate("Scanner", {
+            userUser: userName,
+            scanType: "saida",
+          })
+        }
+      >
+        <Text style={styles.txtButton}>Saída</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
