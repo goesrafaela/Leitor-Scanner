@@ -27,7 +27,7 @@ const ManualInput = () => {
           value={manualBarcode}
           onChangeText={setManualBarcode}
           placeholder="Digite o código de barras"
-          keyboardType="numeric"
+          keyboardType="default"
         />
 
         <View style={styles.buttonContainer}>

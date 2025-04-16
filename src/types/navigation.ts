@@ -5,6 +5,7 @@ export type RootStackParamList = {
     Home: { userUser: string };
     Scanner: { userName?: string };
     EtiquetaInfo: { etiquetaData: any; userName?: string };
+    AprovacaoInfo: { etiquetaData: any; userUser?: string };
 };
 
 export type RootStackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
