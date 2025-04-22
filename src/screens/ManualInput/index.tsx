@@ -5,16 +5,57 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
 
-const ManualInput = () => {
+interface ManualInputProps {
+  route: {
+    params?: {
+      userUser?: string;
+      scanType?: string;
+    };
+  };
+}
+
+const ManualInput = ({ route }: ManualInputProps) => {
   const navigation = useNavigation<RootStackNavigationProp>();
-  const [manualBarcode, setManualBarcode] = useState("");
+  const [productCode, setProductCode] = useState("");
+  const [shelfCode, setShelfCode] = useState("");
 
   const handleConfirm = () => {
-    navigation.navigate("Scanner", { manualBarcode });
+    if (!productCode || !shelfCode) {
+      Alert.alert("Atenção", "Por favor, preencha todos os campos.");
+      return;
+    }
+
+    const etiquetaData = {
+      endereco: shelfCode,
+      deposito: "04",
+      etiqueta: productCode,
+      material: "STR3004376",
+      operador: "02",
+      status: "3",
+      data: new Date().toLocaleDateString(),
+      hora: new Date().toLocaleTimeString(),
+      descricaoMaterial: "HOLDER PORTA DIANTEIRA LE 9.0",
+      descricaoDeposito: "Almoxarifado",
+      descricaoEndereco: "CORREDOR [ A ] PRATE",
+      origem: "11",
+      depositoAtual: "09",
+      op: "32487",
+      qm: "0",
+      qtde: "100.0000",
+      userUser: route.params?.userUser,
+    };
+
+    const scanType = route.params?.scanType || "entrada";
+    if (scanType === "entrada") {
+      navigation.navigate("EtiquetaInfo", { etiquetaData });
+    } else {
+      navigation.navigate("AprovacaoInfo", { etiquetaData });
+    }
   };
 
   return (
@@ -24,9 +65,17 @@ const ManualInput = () => {
 
         <TextInput
           style={styles.input}
-          value={manualBarcode}
-          onChangeText={setManualBarcode}
-          placeholder="Digite o código de barras"
+          value={productCode}
+          onChangeText={setProductCode}
+          placeholder="Digite o código do produto"
+          keyboardType="default"
+        />
+
+        <TextInput
+          style={styles.input}
+          value={shelfCode}
+          onChangeText={setShelfCode}
+          placeholder="Digite o código da prateleira"
           keyboardType="default"
         />
 

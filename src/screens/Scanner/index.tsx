@@ -12,16 +12,25 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
 
-const Scanner = ({ route }) => {
+const Scanner = ({
+  route,
+}: {
+  route: { params?: { userUser?: string; scanType?: string } };
+}) => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const [isEtiquetaModalVisible, setEtiquetaModalVisible] = useState(false);
-  const [barcodeData, setBarcodeData] = useState(null);
+  const [isShelfModalVisible, setShelfModalVisible] = useState(false);
+  const [barcodeData, setBarcodeData] = useState<string | null>(null);
+  const [shelfBarcode, setShelfBarcode] = useState<string | null>(null);
+  const [scanStep, setScanStep] = useState<"product" | "shelf">("product");
+
   const [permission, requestPermission] = useCameraPermissions();
   const [isManualInputModalVisible, setManualInputModalVisible] =
     useState(false);
-  const [manualBarcode, setManualBarcode] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedBarcode, setEditedBarcode] = useState("");
+  const [manualProductBarcode, setManualProductBarcode] = useState("");
+  const [manualShelfBarcode, setManualShelfBarcode] = useState("");
+  const [scanType, setScanType] = useState(route.params?.scanType || "entrada");
+  const [scanMessage, setScanMessage] = useState("Escaneie a etiqueta");
 
   // Função que simula a obtenção automática da localização
   const getAutomaticLocation = () => {
@@ -76,45 +85,114 @@ const Scanner = ({ route }) => {
   }
   const handleBarcodeScan = ({ data }: BarcodeData) => {
     if (data) {
-      setBarcodeData(data);
-      setEtiquetaModalVisible(true);
+      if (scanStep === "product") {
+        setBarcodeData(data);
+        const recognitionType = scanType === "entrada" ? 1 : 2;
+        const apiResponse = {
+          message: "Etiqueta reconhecida com sucesso.",
+          data: {
+            barcode_label: {
+              etiqueta: data,
+              status:
+                recognitionType === 1 ? "1" : Math.random() > 0.5 ? "1" : "2",
+            },
+          },
+        };
+        setEtiquetaData((prev) => ({
+          ...prev,
+          etiqueta: data,
+          status: apiResponse.data.barcode_label.status,
+        }));
+        setEtiquetaModalVisible(true);
+        setScanMessage("Confirme a etiqueta lida");
+      } else {
+        setShelfBarcode(data);
+        setShelfModalVisible(true);
+        setScanMessage("Confirme o código da prateleira");
+      }
     }
-  };
-
-  const handleManualInput = () => {
-    if (manualBarcode.trim() === "") {
-      Alert.alert("Erro", "Por favor, digite um código de barras válido.");
-      return;
-    }
-    setBarcodeData(manualBarcode);
-    setManualInputModalVisible(false);
-    setEtiquetaModalVisible(true);
   };
 
   const handleEtiquetaConfirm = () => {
-    const barcode = barcodeData || manualBarcode;
-    if (!barcode) {
-      Alert.alert("Erro", "Nenhum código de barras foi lido ou digitado.");
+    const productBarcode = barcodeData || manualProductBarcode;
+    if (!productBarcode) {
+      Alert.alert("Erro", "É necessário ler a etiqueta.");
       return;
     }
-    const automaticLocation = getAutomaticLocation();
     setEtiquetaModalVisible(false);
+    setScanStep("shelf");
+    setScanMessage("Escaneie o código da prateleira");
+  };
+
+  const handleShelfConfirm = () => {
+    const productBarcode = barcodeData || manualProductBarcode;
+    if (!productBarcode || !shelfBarcode) {
+      Alert.alert("Erro", "É necessário ler ambos os códigos.");
+      return;
+    }
+    setShelfModalVisible(false);
+    const recognitionType = scanType === "entrada" ? 1 : 2;
+
+    // Simular chamada da API
+    const apiResponse = {
+      message: "Etiqueta reconhecida com sucesso.",
+      data: {
+        barcode_label: {
+          etiqueta: productBarcode,
+          status: recognitionType === 1 ? "1" : Math.random() > 0.5 ? "1" : "2",
+        },
+      },
+    };
+
     navigation.navigate("EtiquetaInfo", {
       etiquetaData: {
         ...etiquetaData,
-        etiqueta: barcode,
-        endereco: automaticLocation.endereco,
-        descricaoEndereco: automaticLocation.descricaoEndereco,
+        etiqueta: productBarcode,
+        endereco: shelfBarcode,
+        status: apiResponse.data.barcode_label.status,
       },
-      userUser: route.params?.userName,
+      userUser: route.params?.userUser,
     });
+
     setBarcodeData(null);
-    setManualBarcode("");
+    setManualProductBarcode("");
+    setShelfBarcode(null);
+    setScanStep("product");
+    setScanMessage("Escaneie a etiqueta");
+  };
+
+  const handleManualInput = () => {
+    if (!manualProductBarcode || !manualShelfBarcode) {
+      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+      return;
+    }
+
+    const etiquetaDataWithBarcodes = {
+      ...etiquetaData,
+      etiqueta: manualProductBarcode,
+      endereco: manualShelfBarcode,
+    };
+
+    if (scanType === "entrada") {
+      navigation.navigate("EtiquetaInfo", {
+        etiquetaData: etiquetaDataWithBarcodes,
+        userUser: route.params?.userUser,
+      });
+    } else {
+      navigation.navigate("AprovacaoInfo", {
+        etiquetaData: etiquetaDataWithBarcodes,
+        userUser: route.params?.userUser,
+      });
+    }
+
+    setManualInputModalVisible(false);
+    setManualProductBarcode("");
+    setManualShelfBarcode("");
   };
 
   // Função para voltar à tela inicial
   const goToHome = () => {
-    navigation.navigate("Home", { userUser: route.params?.userName }); // Navega para a tela "Home" mantendo o usuário
+    navigation.navigate("Home", { userUser: route.params?.userUser }); // Navega para a tela "Home" mantendo o usuário
   };
 
   // Garante que o userUser seja passado em todas as navegações
@@ -124,22 +202,28 @@ const Scanner = ({ route }) => {
   ) => {
     navigation.navigate(screen, {
       ...params,
-      userUser: route.params?.userName,
+      userUser: route.params?.userUser,
     });
   };
 
   return (
     <View style={styles.container}>
+      {/* Status da leitura */}
+      <View style={styles.statusContainer}>
+        <Text style={styles.statusText}>{scanMessage}</Text>
+        <Text style={styles.stepIndicator}>Aguardando leitura da etiqueta</Text>
+      </View>
+
       {/* Área da câmera */}
       <View style={styles.cameraContainer}>
         <CameraView
           style={styles.camera}
-          facing="back" // Define a câmera traseira como padrão
+          facing="back"
           onBarcodeScanned={
             isEtiquetaModalVisible || isManualInputModalVisible
               ? undefined
               : handleBarcodeScan
-          } // Escaneia o código de barras
+          }
         />
       </View>
 
@@ -165,12 +249,19 @@ const Scanner = ({ route }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Entrada Manual de Etiqueta</Text>
+            <Text style={styles.modalTitle}>Entrada Manual de Etiquetas</Text>
+            <TextInput
+              style={[styles.input, { marginBottom: 10 }]}
+              value={manualProductBarcode}
+              onChangeText={setManualProductBarcode}
+              placeholder="Digite o código da etiqueta do produto"
+              keyboardType="default"
+            />
             <TextInput
               style={styles.input}
-              value={manualBarcode}
-              onChangeText={setManualBarcode}
-              placeholder="Digite o código de barras"
+              value={manualShelfBarcode}
+              onChangeText={setManualShelfBarcode}
+              placeholder="Digite o código da prateleira"
               keyboardType="default"
             />
             <View style={styles.modalButtons}>
@@ -191,83 +282,74 @@ const Scanner = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Modal de Etiqueta */}
+      {/* Modal de confirmação da etiqueta */}
       <Modal
-        visible={isEtiquetaModalVisible}
+        animationType="slide"
         transparent={true}
-        animationType="fade"
+        visible={isEtiquetaModalVisible}
         onRequestClose={() => setEtiquetaModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirmar Etiqueta</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={editedBarcode}
-                onChangeText={setEditedBarcode}
-                placeholder="Digite o código de barras"
-                keyboardType="numeric"
-              />
-            ) : (
-              <Text style={styles.modalText}>
-                Código lido: {barcodeData || manualBarcode}
-              </Text>
-            )}
-            <View style={styles.modalButtons}>
+            <Text style={styles.modalTitle}>Confirmação de Leitura</Text>
+            <Text style={styles.modalText}>
+              Etiqueta: {barcodeData || manualProductBarcode}
+            </Text>
+
+            <View style={styles.modalButtonContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleEtiquetaConfirm}
+              >
+                <Text style={styles.modalButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
-                  setIsEditing(false);
                   setEtiquetaModalVisible(false);
+                  setBarcodeData(null);
+                  setManualProductBarcode("");
+                  setScanMessage("Escaneie a etiqueta");
                 }}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={styles.modalButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              {isEditing ? (
-                <TouchableOpacity
-                  style={[styles.button, styles.confirmButton]}
-                  onPress={() => {
-                    setBarcodeData(editedBarcode);
-                    setIsEditing(false);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Salvar</Text>
-                </TouchableOpacity>
-              ) : (
-                <View>
-                  <TouchableOpacity
-                    style={[styles.button, styles.editButton]}
-                    onPress={() => {
-                      setEditedBarcode(barcodeData || manualBarcode);
-                      setIsEditing(true);
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Editar código</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.confirmButton]}
-                    onPress={handleEtiquetaConfirm}
-                  >
-                    <Text style={styles.buttonText}>Confirmar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.approvalButton]}
-                    onPress={() => {
-                      setEtiquetaModalVisible(false);
-                      navigation.navigate("AprovacaoInfo", {
-                        etiquetaData: {
-                          ...etiquetaData,
-                          etiqueta: barcodeData || manualBarcode,
-                        },
-                        userUser: route.params?.userName,
-                      });
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Verificar Aprovação</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmação da prateleira */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isShelfModalVisible}
+        onRequestClose={() => setShelfModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmação de Leitura</Text>
+            <Text style={styles.modalText}>
+              Código da Prateleira: {shelfBarcode}
+            </Text>
+
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleShelfConfirm}
+              >
+                <Text style={styles.modalButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShelfModalVisible(false);
+                  setShelfBarcode(null);
+                  setScanMessage("Escaneie o código da prateleira");
+                }}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -277,6 +359,22 @@ const Scanner = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 24,
+    width: "90%",
+    maxWidth: 400,
+    marginVertical: "auto",
+    elevation: 5,
+  },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -310,13 +408,12 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   modalButtons: {
-    gap: 5,
+    gap: 12,
     flexDirection: "column",
     alignItems: "stretch",
     width: "100%",
-    marginBottom: 16,
-
     marginTop: 20,
+    paddingBottom: 10,
   },
   cancelButton: {
     backgroundColor: "#6c68b5",
@@ -390,12 +487,14 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: "#6495ED",
-    padding: 20,
+    padding: 24,
     borderRadius: 10,
     width: "90%",
-    maxHeight: "90%",
-    marginVertical: 20,
+    maxHeight: "80%",
+    marginVertical: "auto",
+    marginHorizontal: "auto",
     elevation: 5,
+    marginBottom: 32,
   },
   modalRow: {
     flexDirection: "column",
@@ -436,7 +535,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#4169E1",
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 16,
+    marginBottom: 16,
     width: "100%",
   },
   modalButtonText: {
@@ -453,6 +553,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "white",
     marginBottom: 10,
+  },
+  statusContainer: {
+    padding: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderRadius: 8,
+    marginBottom: 10,
+    width: "80%",
+    alignItems: "center",
+  },
+  statusText: {
+    fontSize: 16,
+    color: "#282abd",
+    fontWeight: "bold",
+    marginBottom: 5,
+  },
+  stepIndicator: {
+    fontSize: 14,
+    color: "#666",
   },
 });
 
