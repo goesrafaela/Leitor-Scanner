@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
 import { AprovacaoData } from "../../interfaces/IAprovacaoData";
 import styles from "../../styles/styleAprovacaoInfo";
-import { handleApproval } from "../../handlers/handlerAprovacaoInfo"; // Importação do handler
 
 const AprovacaoInfo = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
@@ -12,6 +11,7 @@ const AprovacaoInfo = () => {
   const etiquetaData = route.params?.etiquetaData as AprovacaoData;
   const userUser = route.params?.userUser;
 
+  /*
   const handleApprove = async () => {
     try {
       await handleApproval({
@@ -23,6 +23,7 @@ const AprovacaoInfo = () => {
       Alert.alert("Erro", "Não foi possível aprovar a etiqueta. Tente novamente.");
     }
   };
+*/
 
   return (
     <View style={styles.container}>

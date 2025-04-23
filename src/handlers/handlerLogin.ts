@@ -1,6 +1,5 @@
 import { Alert } from "react-native";
 import { NavigationProp } from "@react-navigation/native";
-import { RootStackParamList } from "../../types/navigation";
 import api from "../services/api";
 
 export const handleLogin = async (

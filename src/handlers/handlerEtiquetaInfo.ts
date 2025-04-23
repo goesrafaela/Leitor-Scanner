@@ -1,13 +1,6 @@
 import { Alert } from "react-native";
 import { recognizeBarcode, RecognizeRequest } from "../services/api";
-
-interface HandleSaveParams {
-  editedEtiqueta: string;
-  editedEndereco: string;
-  userUser: string;
-  setEtiquetaData: React.Dispatch<React.SetStateAction<any>>;
-  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
-}
+import { HandleSaveParams } from "./interfaces/IHandleSaveParams";
 
 export const handleSave = async ({
   editedEtiqueta,

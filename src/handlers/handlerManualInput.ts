@@ -1,13 +1,6 @@
 import { Alert } from "react-native";
-import { NavigationProp } from "@react-navigation/native";
 import { recognizeBarcode, RecognizeRequest } from "../services/api";
-
-interface HandleConfirmParams {
-  productCode: string;
-  shelfCode: string;
-  route: any;
-  navigation: NavigationProp<any>;
-}
+import { HandleConfirmParams } from "./interfaces/IHandleConfirmParams";
 
 export const handleConfirm = async ({
   productCode,
@@ -33,6 +26,7 @@ export const handleConfirm = async ({
     const response = await recognizeBarcode(productCode, requestData);
 
     if (response.data?.barcode_label) {
+
       const etiquetaData = {
         endereco: shelfCode,
         deposito: "04",
@@ -69,4 +63,5 @@ export const handleConfirm = async ({
   } catch (error) {
     Alert.alert("Erro", "Erro ao conectar com o servidor.");
   }
+
 };

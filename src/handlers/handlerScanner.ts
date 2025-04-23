@@ -1,10 +1,7 @@
 import { Alert } from "react-native";
 import { NavigationProp } from "@react-navigation/native";
 import { recognizeBarcode, RecognizeRequest } from "../services/api";
-
-interface BarcodeData {
-  data: string;
-}
+import { HandleBarcodeScanParams } from "./interfaces/IHandleBarcodeScanParams";
 
 // Função para voltar à tela inicial
 export const goToHome = (navigation: NavigationProp<any>, route: any) => {
@@ -23,22 +20,6 @@ export const navigateWithUser = (
     userUser: route.params?.userUser,
   });
 };
-
-interface HandleBarcodeScanParams {
-  data: BarcodeData;
-  isScanning: boolean;
-  scanStep: "product" | "shelf";
-  scanType: string;
-  routeParams: { userUser?: string };
-  setIsScanning: (value: boolean) => void;
-  setBarcodeData: (value: string | null) => void;
-  setScanMessage: (value: string) => void;
-  setEtiquetaData: (value: any) => void;
-  setEtiquetaModalVisible: (value: boolean) => void;
-  setShelfBarcode: (value: string | null) => void;
-  setShelfModalVisible: (value: boolean) => void;
-  navigation: NavigationProp<any>;
-}
 
 export const handleBarcodeScan = async ({
   data,
