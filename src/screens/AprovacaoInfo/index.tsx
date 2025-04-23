@@ -1,26 +1,29 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
-
-interface AprovacaoData {
-  etiqueta: string;
-  material: string;
-  descricaoMaterial: string;
-  op: string;
-  qm: string;
-  qtde: string;
-  status: string;
-  data: string;
-  hora: string;
-  operador: string;
-}
+import { AprovacaoData } from "../../interfaces/IAprovacaoData";
+import styles from "../../styles/styleAprovacaoInfo";
 
 const AprovacaoInfo = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const route = useRoute();
   const etiquetaData = route.params?.etiquetaData as AprovacaoData;
   const userUser = route.params?.userUser;
+
+  /*
+  const handleApprove = async () => {
+    try {
+      await handleApproval({
+        etiquetaData,
+        userUser,
+        navigation,
+      });
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível aprovar a etiqueta. Tente novamente.");
+    }
+  };
+*/
 
   return (
     <View style={styles.container}>
@@ -90,6 +93,12 @@ const AprovacaoInfo = () => {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
+            style={[styles.button, styles.approveButton]}
+            onPress={handleApprove}
+          >
+            <Text style={styles.buttonText}>Aprovar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.button, styles.backButton]}
             onPress={() =>
               navigation.navigate("Scanner", { userName: userUser })
@@ -102,79 +111,5 @@ const AprovacaoInfo = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-    justifyContent: "center",
-  },
-  content: {
-    flex: 1,
-    padding: 10,
-    paddingTop: 40,
-  },
-  row: {
-    marginBottom: 8,
-    paddingHorizontal: 5,
-  },
-  field: {
-    marginVertical: 2,
-    backgroundColor: "white",
-    borderRadius: 6,
-    padding: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  label: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 2,
-  },
-  inputContainer: {
-    marginTop: 1,
-  },
-  value: {
-    fontSize: 14,
-    color: "#282abd",
-    fontWeight: "bold",
-  },
-  valueDesc: {
-    fontSize: 12,
-    color: "#333",
-    marginTop: 1,
-  },
-  approvedStatus: {
-    color: "#32CD32",
-  },
-  button: {
-    backgroundColor: "#282abd",
-    padding: 10,
-    borderRadius: 6,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
-    paddingHorizontal: 5,
-  },
-  backButton: {
-    backgroundColor: "#282abd",
-    flex: 1,
-  },
-});
 
 export default AprovacaoInfo;
