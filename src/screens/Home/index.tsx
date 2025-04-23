@@ -5,9 +5,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
   Image,
 } from "react-native";
 import iconImage from "../../img/img5.png";
