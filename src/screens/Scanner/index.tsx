@@ -31,6 +31,7 @@ const Scanner = ({
   const [manualShelfBarcode, setManualShelfBarcode] = useState("");
   const [scanType, setScanType] = useState(route.params?.scanType || "entrada");
   const [scanMessage, setScanMessage] = useState("Escaneie a etiqueta");
+  const [isScanning, setIsScanning] = useState(true);
 
   // Função que simula a obtenção automática da localização
   const getAutomaticLocation = () => {
@@ -83,33 +84,97 @@ const Scanner = ({
   interface BarcodeData {
     data: string;
   }
-  const handleBarcodeScan = ({ data }: BarcodeData) => {
-    if (data) {
-      if (scanStep === "product") {
-        setBarcodeData(data);
-        const recognitionType = scanType === "entrada" ? 1 : 2;
-        const apiResponse = {
-          message: "Etiqueta reconhecida com sucesso.",
-          data: {
-            barcode_label: {
+  const handleBarcodeScan = async ({ data }: BarcodeData) => {
+    if (!isScanning || !data) return;
+
+    if (scanStep === "product") {
+      setIsScanning(false);
+      setBarcodeData(data);
+      const recognitionType = scanType === "entrada" ? 1 : 2;
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          setScanMessage("Processando leitura...");
+          const response = await fetch(
+            `https://demo-polymer.meusalt.com.br/api/barcode-labels/${data}/recognize`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: parseInt(route.params?.userUser || "1"),
+                position_id: 1,
+                recognition_type: recognitionType,
+              }),
+            }
+          );
+
+          const apiResponse = await response.json();
+
+          if (response.ok && apiResponse.data?.barcode_label) {
+            setEtiquetaData((prev) => ({
+              ...prev,
               etiqueta: data,
-              status:
-                recognitionType === 1 ? "1" : Math.random() > 0.5 ? "1" : "2",
-            },
-          },
-        };
-        setEtiquetaData((prev) => ({
-          ...prev,
-          etiqueta: data,
-          status: apiResponse.data.barcode_label.status,
-        }));
-        setEtiquetaModalVisible(true);
-        setScanMessage("Confirme a etiqueta lida");
-      } else {
-        setShelfBarcode(data);
-        setShelfModalVisible(true);
-        setScanMessage("Confirme o código da prateleira");
+              status: apiResponse.data.barcode_label.status || "1",
+            }));
+            setEtiquetaModalVisible(true);
+            setScanMessage("Confirme a etiqueta lida");
+            break;
+          } else {
+            let errorMessage = "Erro desconhecido ao processar a etiqueta.";
+
+            if (response.status === 404) {
+              errorMessage = "Etiqueta não encontrada no sistema.";
+            } else if (response.status === 400) {
+              errorMessage = "Formato de etiqueta inválido.";
+            } else if (response.status === 401) {
+              errorMessage =
+                "Sessão expirada. Por favor, faça login novamente.";
+              navigation.navigate("Login");
+              return;
+            } else if (apiResponse.message) {
+              errorMessage = apiResponse.message;
+            }
+
+            if (retryCount === maxRetries - 1) {
+              Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+              setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+              setBarcodeData(null);
+              setTimeout(() => {
+                setIsScanning(true);
+                setScanMessage("Escaneie a etiqueta");
+              }, 3000);
+              break;
+            }
+            retryCount++;
+          }
+        } catch (error) {
+          if (retryCount === maxRetries - 1) {
+            Alert.alert(
+              "Erro de conexão",
+              "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
+            );
+            setScanMessage("Erro de conexão. Tente novamente.");
+            setTimeout(() => {
+              setIsScanning(true);
+              setScanMessage("Escaneie a etiqueta");
+            }, 3000);
+            break;
+          }
+          retryCount++;
+        }
+
+        if (retryCount < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
+    } else {
+      setShelfBarcode(data);
+      setShelfModalVisible(true);
+      setScanMessage("Confirme o código da prateleira");
     }
   };
 
@@ -220,7 +285,7 @@ const Scanner = ({
           style={styles.camera}
           facing="back"
           onBarcodeScanned={
-            isEtiquetaModalVisible || isManualInputModalVisible
+            isEtiquetaModalVisible || isManualInputModalVisible || !isScanning
               ? undefined
               : handleBarcodeScan
           }
