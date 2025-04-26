@@ -23,15 +23,16 @@ const Scanner = ({
   const [barcodeData, setBarcodeData] = useState<string | null>(null);
   const [shelfBarcode, setShelfBarcode] = useState<string | null>(null);
   const [scanStep, setScanStep] = useState<"product" | "shelf">("product");
-
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [failedShelfAttempts, setFailedShelfAttempts] = useState(0);
+  const [scanType, setScanType] = useState(route.params?.scanType || "entrada");
+  const [scanMessage, setScanMessage] = useState("Escaneie a etiqueta");
+  const [isScanning, setIsScanning] = useState(true);
   const [permission, requestPermission] = useCameraPermissions();
   const [isManualInputModalVisible, setManualInputModalVisible] =
     useState(false);
   const [manualProductBarcode, setManualProductBarcode] = useState("");
   const [manualShelfBarcode, setManualShelfBarcode] = useState("");
-  const [scanType, setScanType] = useState(route.params?.scanType || "entrada");
-  const [scanMessage, setScanMessage] = useState("Escaneie a etiqueta");
-  const [isScanning, setIsScanning] = useState(true);
 
   // Função que simula a obtenção automática da localização
   const getAutomaticLocation = () => {
@@ -91,10 +92,19 @@ const Scanner = ({
       setIsScanning(false);
       setBarcodeData(data);
       const recognitionType = scanType === "entrada" ? 1 : 2;
-      let retryCount = 0;
-      const maxRetries = 3;
+      const isEntrada = scanType === "entrada";
+      const newFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(newFailedAttempts);
 
-      while (retryCount < maxRetries) {
+      if (newFailedAttempts >= 3) {
+        setFailedAttempts(0);
+        setScanStep("product");
+        setIsScanning(true);
+        setScanMessage("Escaneie a etiqueta novamente");
+        return;
+      }
+
+      if (!isEntrada) {
         try {
           setScanMessage("Processando leitura...");
           const response = await fetch(
@@ -120,14 +130,24 @@ const Scanner = ({
               etiqueta: data,
               status: apiResponse.data.barcode_label.status || "1",
             }));
-            setEtiquetaModalVisible(true);
-            setScanMessage("Confirme a etiqueta lida");
-            break;
+            navigation.navigate("AprovacaoInfo", {
+              etiquetaData: {
+                ...etiquetaData,
+                etiqueta: data,
+                status: apiResponse.data.barcode_label.status,
+              },
+              userUser: route.params?.userUser,
+            });
+            return;
           } else {
             let errorMessage = "Erro desconhecido ao processar a etiqueta.";
 
             if (response.status === 404) {
-              errorMessage = "Etiqueta não encontrada no sistema.";
+              navigation.navigate("ManualInput", {
+                scanType: scanType,
+                userUser: route.params?.userUser,
+              });
+              return;
             } else if (response.status === 400) {
               errorMessage = "Formato de etiqueta inválido.";
             } else if (response.status === 401) {
@@ -139,17 +159,96 @@ const Scanner = ({
               errorMessage = apiResponse.message;
             }
 
-            if (retryCount === maxRetries - 1) {
-              Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
-              setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
-              setBarcodeData(null);
-              setTimeout(() => {
-                setIsScanning(true);
-                setScanMessage("Escaneie a etiqueta");
-              }, 3000);
-              break;
+            Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+            setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+            setBarcodeData(null);
+            setTimeout(() => {
+              setIsScanning(true);
+              setScanMessage("Escaneie a etiqueta");
+            }, 3000);
+            return;
+          }
+        } catch (error) {
+          Alert.alert(
+            "Erro de conexão",
+            "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
+          );
+          setScanMessage("Erro de conexão. Tente novamente.");
+          setTimeout(() => {
+            setIsScanning(true);
+            setScanMessage("Escaneie a etiqueta");
+          }, 3000);
+          return;
+        }
+      }
+      if (isEntrada) {
+        try {
+          setScanMessage("Processando leitura...");
+          const response = await fetch(
+            `https://demo-polymer.meusalt.com.br/api/barcode-labels/${data}/recognize`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: parseInt(route.params?.userUser || "1"),
+                position_id: 1,
+                recognition_type: recognitionType,
+              }),
             }
-            retryCount++;
+          );
+
+          const apiResponse = await response.json();
+
+          if (response.ok && apiResponse.data?.barcode_label) {
+            setEtiquetaData((prev) => ({
+              ...prev,
+              etiqueta: data,
+              status: apiResponse.data.barcode_label.status || "1",
+            }));
+            if (isEntrada) {
+              setEtiquetaModalVisible(true);
+              setScanMessage("Confirme a etiqueta lida");
+            } else {
+              navigation.navigate("AprovacaoInfo", {
+                etiquetaData: {
+                  ...etiquetaData,
+                  etiqueta: data,
+                  status: apiResponse.data.barcode_label.status,
+                },
+                userUser: route.params?.userUser,
+              });
+            }
+            return;
+          } else {
+            let errorMessage = "Erro desconhecido ao processar a etiqueta.";
+
+            if (response.status === 404) {
+              navigation.navigate("ManualInput", {
+                scanType: scanType,
+                userUser: route.params?.userUser,
+              });
+              return;
+            } else if (response.status === 400) {
+              errorMessage = "Formato de etiqueta inválido.";
+            } else if (response.status === 401) {
+              errorMessage =
+                "Sessão expirada. Por favor, faça login novamente.";
+              navigation.navigate("Login");
+              return;
+            } else if (apiResponse.message) {
+              errorMessage = apiResponse.message;
+            }
+
+            Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+            setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+            setBarcodeData(null);
+            setTimeout(() => {
+              setIsScanning(true);
+              setScanMessage("Escaneie a etiqueta");
+            }, 3000);
+            return;
           }
         } catch (error) {
           if (retryCount === maxRetries - 1) {
@@ -162,7 +261,7 @@ const Scanner = ({
               setIsScanning(true);
               setScanMessage("Escaneie a etiqueta");
             }, 3000);
-            break;
+            return;
           }
           retryCount++;
         }
@@ -173,8 +272,19 @@ const Scanner = ({
       }
     } else {
       setShelfBarcode(data);
-      setShelfModalVisible(true);
-      setScanMessage("Confirme o código da prateleira");
+      const newFailedShelfAttempts = failedShelfAttempts + 1;
+      setFailedShelfAttempts(newFailedShelfAttempts);
+
+      if (newFailedShelfAttempts >= 3) {
+        navigation.navigate("ManualInput", {
+          scanType: scanType,
+          userUser: route.params?.userUser,
+        });
+        setFailedShelfAttempts(0);
+      } else {
+        setShelfModalVisible(true);
+        setScanMessage("Confirme o código da prateleira");
+      }
     }
   };
 
@@ -185,8 +295,10 @@ const Scanner = ({
       return;
     }
     setEtiquetaModalVisible(false);
-    setScanStep("shelf");
-    setScanMessage("Escaneie o código da prateleira");
+    if (scanType === "entrada") {
+      setScanStep("shelf");
+      setScanMessage("Escaneie o código da prateleira");
+    }
   };
 
   const handleShelfConfirm = () => {
@@ -227,8 +339,11 @@ const Scanner = ({
   };
 
   const handleManualInput = () => {
-    if (!manualProductBarcode || !manualShelfBarcode) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+    if (
+      !manualProductBarcode ||
+      (scanType === "entrada" && !manualShelfBarcode)
+    ) {
+      Alert.alert("Erro", "Por favor, preencha todos os campos necessários.");
       return;
     }
 
@@ -273,79 +388,40 @@ const Scanner = ({
 
   return (
     <View style={styles.container}>
-      {/* Status da leitura */}
       <View style={styles.statusContainer}>
         <Text style={styles.statusText}>{scanMessage}</Text>
-        <Text style={styles.stepIndicator}>Aguardando leitura da etiqueta</Text>
+        <Text style={styles.stepIndicator}>
+          {scanStep === "product" ? "Passo 1/2" : "Passo 2/2"}
+        </Text>
       </View>
 
-      {/* Área da câmera */}
       <View style={styles.cameraContainer}>
         <CameraView
           style={styles.camera}
-          facing="back"
-          onBarcodeScanned={
-            isEtiquetaModalVisible || isManualInputModalVisible || !isScanning
-              ? undefined
-              : handleBarcodeScan
-          }
+          barcodeScannerSettings={{
+            barCodeTypes: ["qr", "ean13", "code128"],
+          }}
+          onBarcodeScanned={isScanning ? handleBarcodeScan : undefined}
         />
       </View>
 
-      {/* Botões de ação */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => setManualInputModalVisible(true)}
+          onPress={() =>
+            navigation.navigate("ManualInput", {
+              scanType: scanType,
+              userUser: route.params?.userUser,
+            })
+          }
         >
           <Text style={styles.buttonText}>Entrada Manual</Text>
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionButton} onPress={goToHome}>
           <Text style={styles.buttonText}>Voltar para Home</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Modal de entrada manual */}
-      <Modal
-        visible={isManualInputModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setManualInputModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Entrada Manual de Etiquetas</Text>
-            <TextInput
-              style={[styles.input, { marginBottom: 10 }]}
-              value={manualProductBarcode}
-              onChangeText={setManualProductBarcode}
-              placeholder="Digite o código da etiqueta do produto"
-              keyboardType="default"
-            />
-            <TextInput
-              style={styles.input}
-              value={manualShelfBarcode}
-              onChangeText={setManualShelfBarcode}
-              placeholder="Digite o código da prateleira"
-              keyboardType="default"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={() => setManualInputModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.confirmButton]}
-                onPress={handleManualInput}
-              >
-                <Text style={styles.buttonText}>Confirmar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Modal de confirmação da etiqueta */}
       <Modal
@@ -419,223 +495,159 @@ const Scanner = ({
           </View>
         </View>
       </Modal>
+      {/* Manual Input Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isManualInputModalVisible}
+        onRequestClose={() => setManualInputModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {scanStep === "product"
+                ? "Digite o código da etiqueta"
+                : "Digite o código da prateleira"}
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={
+                scanStep === "product"
+                  ? manualProductBarcode
+                  : manualShelfBarcode
+              }
+              onChangeText={(text) =>
+                scanStep === "product"
+                  ? setManualProductBarcode(text)
+                  : setManualShelfBarcode(text)
+              }
+              placeholder="Digite o código"
+            />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setManualInputModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => {
+                  if (scanStep === "product") {
+                    handleEtiquetaConfirm();
+                  } else {
+                    handleShelfConfirm();
+                  }
+                  setManualInputModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  statusContainer: {
+    padding: 35,
+    backgroundColor: "#282abd",
+  },
+  statusText: {
+    color: "#fff",
+    fontSize: 18,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  stepIndicator: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 5,
+  },
+  cameraContainer: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  camera: {
+    flex: 1,
+  },
+  buttonContainer: {
+    padding: 15,
+    backgroundColor: "#fff",
+  },
+  actionButton: {
+    backgroundColor: "#282abd",
+    padding: 15,
+    borderRadius: 8,
+    marginVertical: 5,
+  },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 24,
-    width: "90%",
-    maxWidth: 400,
-    marginVertical: "auto",
-    elevation: 5,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    backgroundColor: "#fff",
     padding: 20,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-  },
-  actionButton: {
-    backgroundColor: "#4169E1",
-    padding: 15,
-    borderRadius: 8,
-    width: "45%",
-    elevation: 3,
+    borderRadius: 10,
+    width: "80%",
   },
   modalTitle: {
     fontSize: 18,
-    marginBottom: 20,
-    color: "#282abd",
     fontWeight: "bold",
-  },
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#282abd",
-    borderRadius: 4,
-    padding: 8,
-    backgroundColor: "white",
-    color: "#000",
-  },
-  modalButtons: {
-    gap: 12,
-    flexDirection: "column",
-    alignItems: "stretch",
-    width: "100%",
-    marginTop: 20,
-    paddingBottom: 10,
-  },
-  cancelButton: {
-    backgroundColor: "#6c68b5",
-    marginBottom: 8,
-  },
-  editButton: {
-    backgroundColor: "#4169E1",
-    marginBottom: 16,
-    width: "100%",
-  },
-  confirmButton: {
-    backgroundColor: "#282abd",
-    marginTop: 8, // Adicionando margem superior para separaçã
-    marginBottom: 16,
-  },
-  approvalButton: {
-    backgroundColor: "#282abd",
-  },
-  container: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-  },
-  txtHome: {
-    fontSize: 20,
-    marginBottom: 25,
-    color: "#EFB719",
-  },
-  message: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  cameraContainer: {
-    width: "80%",
-    height: 300,
-    overflow: "hidden",
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  camera: {
-    flex: 1,
-  },
-  button: {
-    padding: 10,
-    backgroundColor: "#282abd",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-  },
-  homeButton: {
-    padding: 10,
-    backgroundColor: "#282abd",
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
-  },
-  homeButtonText: {
-    color: "white",
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#6495ED",
-    padding: 24,
-    borderRadius: 10,
-    width: "90%",
-    maxHeight: "80%",
-    marginVertical: "auto",
-    marginHorizontal: "auto",
-    elevation: 5,
-    marginBottom: 32,
-  },
-  modalRow: {
-    flexDirection: "column",
     marginBottom: 15,
-    width: "100%",
-  },
-  modalField: {
-    width: "100%",
-    marginBottom: 10,
-  },
-  modalLabel: {
-    fontSize: 16,
-    color: "white",
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  modalValue: {
-    fontSize: 18,
-    color: "white",
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 4,
-  },
-  modalValueDesc: {
-    fontSize: 14,
-    color: "white",
-    marginTop: 4,
-    paddingHorizontal: 4,
-  },
-  modalInputContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 6,
-    padding: 12,
-  },
-  modalButton: {
-    padding: 15,
-    backgroundColor: "#4169E1",
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-    marginBottom: 16,
-    width: "100%",
-  },
-  modalButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  editButton: {
-    backgroundColor: "#4169E1",
-    marginBottom: 16,
-    width: "100%",
+    textAlign: "center",
+    color: "#282abd",
   },
   modalText: {
     fontSize: 16,
-    color: "white",
-    marginBottom: 10,
+    marginBottom: 15,
+    textAlign: "center",
   },
-  statusContainer: {
-    padding: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+  input: {
+    borderWidth: 1,
+    borderColor: "#282abd",
     borderRadius: 8,
-    marginBottom: 10,
-    width: "80%",
-    alignItems: "center",
-  },
-  statusText: {
+    padding: 15,
+    marginBottom: 15,
     fontSize: 16,
-    color: "#282abd",
-    fontWeight: "bold",
-    marginBottom: 5,
   },
-  stepIndicator: {
-    fontSize: 14,
-    color: "#666",
+  modalButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: "#6c68b5",
+  },
+  confirmButton: {
+    backgroundColor: "#282abd",
+  },
+  modalButtonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

@@ -25,12 +25,17 @@ const ManualInput = ({ route }: ManualInputProps) => {
   const [shelfCode, setShelfCode] = useState("");
 
   const handleConfirm = async () => {
-    if (!productCode || !shelfCode) {
+    const scanType = route.params?.scanType || "entrada";
+    const isEntrada = scanType === "entrada";
+
+    if (isEntrada && (!productCode || !shelfCode)) {
       Alert.alert("Atenção", "Por favor, preencha todos os campos.");
+      return;
+    } else if (!isEntrada && !productCode) {
+      Alert.alert("Atenção", "Por favor, preencha o código do produto.");
       return;
     }
 
-    const scanType = route.params?.scanType || "entrada";
     const recognitionType = scanType === "entrada" ? 1 : 2;
 
     try {
@@ -43,7 +48,7 @@ const ManualInput = ({ route }: ManualInputProps) => {
           },
           body: JSON.stringify({
             user_id: parseInt(route.params?.userUser || "1"),
-            position_id: parseInt(shelfCode),
+            position_id: isEntrada ? parseInt(shelfCode) : 1,
             recognition_type: recognitionType,
           }),
         }
@@ -53,7 +58,7 @@ const ManualInput = ({ route }: ManualInputProps) => {
 
       if (response.ok) {
         const etiquetaData = {
-          endereco: shelfCode,
+          endereco: isEntrada ? shelfCode : "N/A",
           deposito: "04",
           etiqueta: productCode,
           material: apiResponse.data?.barcode_label?.material || "STR3004376",
@@ -90,6 +95,8 @@ const ManualInput = ({ route }: ManualInputProps) => {
     }
   };
 
+  const scanType = route.params?.scanType || "entrada";
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -103,13 +110,15 @@ const ManualInput = ({ route }: ManualInputProps) => {
           keyboardType="default"
         />
 
-        <TextInput
-          style={styles.input}
-          value={shelfCode}
-          onChangeText={setShelfCode}
-          placeholder="Digite o código da prateleira"
-          keyboardType="default"
-        />
+        {scanType === "entrada" && (
+          <TextInput
+            style={styles.input}
+            value={shelfCode}
+            onChangeText={setShelfCode}
+            placeholder="Digite o código da prateleira"
+            keyboardType="default"
+          />
+        )}
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
