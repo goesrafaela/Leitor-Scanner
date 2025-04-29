@@ -19,7 +19,7 @@ const Home = ({ route }) => {
   return (
     <View style={styles.container}>
       <Image source={iconImage} style={styles.icon} resizeMode="contain" />
-      <Text style={styles.txtHome}>Bem vindo, {userName}</Text>
+      <Text style={styles.txtHome}>Bem vindo</Text>
       <TouchableOpacity
         style={styles.button}
         onPress={() =>
