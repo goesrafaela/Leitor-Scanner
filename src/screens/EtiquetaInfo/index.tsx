@@ -27,6 +27,7 @@ interface EtiquetaData {
   op: string;
   qm: string;
   qtde: string;
+  positionId?: string;
 }
 
 const EtiquetaInfo = () => {
@@ -39,6 +40,40 @@ const EtiquetaInfo = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEtiqueta, setEditedEtiqueta] = useState(etiquetaData.etiqueta);
   const [editedEndereco, setEditedEndereco] = useState(etiquetaData.endereco);
+  const [searchBarcode, setSearchBarcode] = useState("");
+
+  const handleSearch = async () => {
+    if (!searchBarcode) {
+      Alert.alert("Atenção", "Por favor, insira o código do produto.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/barcode-labels/${searchBarcode}/location`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEtiquetaData({
+          ...etiquetaData,
+          etiqueta: searchBarcode,
+          positionId: data.positionId,
+          status: data.status,
+          qtde: data.quantity,
+          descricaoEndereco: data.location,
+        });
+      } else {
+        Alert.alert("Erro", data.message || "Produto não encontrado");
+      }
+    } catch (error) {
+      Alert.alert("Erro", "Erro ao conectar com o servidor");
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -78,6 +113,27 @@ const EtiquetaInfo = () => {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Digite o código do produto"
+            value={searchBarcode}
+            onChangeText={setSearchBarcode}
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.buttonText}>Buscar</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Position ID:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>{etiquetaData.positionId || "-"}</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.row}>
           <View style={styles.field}>
             <Text style={styles.label}>Endereço:</Text>
@@ -250,6 +306,26 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     paddingTop: 40,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  searchInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#282abd",
+    borderRadius: 6,
+    padding: 8,
+    marginRight: 10,
+    backgroundColor: "white",
+  },
+  searchButton: {
+    backgroundColor: "#282abd",
+    padding: 10,
+    borderRadius: 6,
+    justifyContent: "center",
   },
   row: {
     marginBottom: 8,

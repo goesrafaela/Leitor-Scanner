@@ -14,16 +14,15 @@ import iconImage from "../../img/img5.png";
 
 const Login = () => {
   const navigation = useNavigation<RootStackNavigationProp>();
-  const [user, setUser] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   const handleLogin = () => {
-    if (user === "" || password === "") {
+    if (name === "" || email === "") {
       Alert.alert("Atenção", "Por favor, preencha todos os campos.");
     } else {
       /*Requisição para o servidor com os dados do usuário*/
-
-      navigation.navigate("Home", { userUser: user });
+      navigation.navigate("Home", { userUser: name });
     }
   };
 
@@ -35,18 +34,17 @@ const Login = () => {
 
         <TextInput
           style={styles.input}
-          placeholder="Digite seu usuário"
-          value={user}
-          onChangeText={setUser}
-          keyboardType="email-address"
+          placeholder="Digite seu nome"
+          value={name}
+          onChangeText={setName}
         />
         <TextInput
           style={styles.input}
-          placeholder="Digite sua senha"
-          keyboardType="numeric"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          placeholder="Digite seu email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
 
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
