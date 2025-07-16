@@ -7,15 +7,17 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
+import { recognizeBarcode, RecognizeRequest } from "../../services/api";
 
 const Scanner = ({
   route,
 }: {
-  route: { params?: { userUser?: string; scanType?: string } };
+  route: { params?: { userUser?: string; scanType?: string; userName?: string; userEmail?: string } };
 }) => {
   const navigation = useNavigation<RootStackNavigationProp>();
   const [isEtiquetaModalVisible, setEtiquetaModalVisible] = useState(false);
@@ -93,198 +95,103 @@ const Scanner = ({
       setBarcodeData(data);
       const recognitionType = scanType === "entrada" ? 1 : 2;
       const isEntrada = scanType === "entrada";
-      const newFailedAttempts = failedAttempts + 1;
-      setFailedAttempts(newFailedAttempts);
-
-      if (newFailedAttempts >= 3) {
-        setFailedAttempts(0);
-        setScanStep("product");
-        setIsScanning(true);
-        setScanMessage("Escaneie a etiqueta novamente");
-        return;
-      }
-
-      if (!isEntrada) {
-        try {
-          setScanMessage("Processando leitura...");
-          const response = await fetch(
-            `https://demo-polymer.meusalt.com.br/api/barcode-labels/${data}/recognize`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                user_id: parseInt(route.params?.userUser || "1"),
-                position_id: 1,
-                recognition_type: recognitionType,
-              }),
-            }
-          );
-
-          const apiResponse = await response.json();
-
-          if (response.ok && apiResponse.data?.barcode_label) {
-            setEtiquetaData((prev) => ({
-              ...prev,
-              etiqueta: data,
-              status: apiResponse.data.barcode_label.status || "1",
-            }));
+      
+      try {
+        setScanMessage("Processando leitura...");
+        
+        // Preparar os dados para a requisição
+        const requestData: RecognizeRequest = {
+          user_id: parseInt(route.params?.userUser || "1"),
+          position_id: 1, // Valor padrão, será atualizado na tela de confirmação
+          recognition_type: recognitionType as 1 | 2 | 3,
+        };
+        
+        // Chamar a API para reconhecer o código de barras
+        const apiResponse = await recognizeBarcode(data, requestData);
+        
+        if (apiResponse.data?.barcode_label) {
+          // Atualizar os dados da etiqueta com a resposta da API
+          const updatedEtiquetaData = {
+            ...etiquetaData,
+            etiqueta: data,
+            status: apiResponse.data.barcode_label.status || "1",
+            material: apiResponse.data.barcode_label.material || etiquetaData.material,
+            descricaoMaterial: apiResponse.data.barcode_label.descricaoMaterial || etiquetaData.descricaoMaterial,
+            op: apiResponse.data.barcode_label.op || etiquetaData.op,
+            qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
+            qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+          };
+          
+          setEtiquetaData(updatedEtiquetaData);
+          
+          if (isEntrada) {
+            // Para entrada, mostrar modal de confirmação
+            setEtiquetaModalVisible(true);
+            setScanMessage("Confirme a etiqueta lida");
+          } else {
+            // Para saída, navegar para a tela de aprovação
             navigation.navigate("AprovacaoInfo", {
-              etiquetaData: {
-                ...etiquetaData,
-                etiqueta: data,
-                status: apiResponse.data.barcode_label.status,
-              },
+              etiquetaData: updatedEtiquetaData,
+              userUser: route.params?.userUser,
+              userName: route.params?.userName,
+              userEmail: route.params?.userEmail,
+            });
+          }
+          return;
+        } else {
+          // Tratar erros da API
+          let errorMessage = apiResponse.message || "Erro desconhecido ao processar a etiqueta.";
+          
+          if (apiResponse.errors) {
+            // Formatar mensagens de erro se houver
+            const errorMessages = Object.values(apiResponse.errors)
+              .flat()
+              .join("\n");
+            errorMessage = errorMessages || errorMessage;
+          }
+          
+          // Verificar se devemos ir para entrada manual
+          const shouldGoToManualInput = errorMessage.includes("não encontrada") || 
+                                       errorMessage.includes("not found");
+          
+          if (shouldGoToManualInput) {
+            navigation.navigate("ManualInput", {
+              scanType: scanType,
               userUser: route.params?.userUser,
             });
             return;
-          } else {
-            let errorMessage = "Erro desconhecido ao processar a etiqueta.";
-
-            if (response.status === 404) {
-              navigation.navigate("ManualInput", {
-                scanType: scanType,
-                userUser: route.params?.userUser,
-              });
-              return;
-            } else if (response.status === 400) {
-              errorMessage = "Formato de etiqueta inválido.";
-            } else if (response.status === 401) {
-              errorMessage =
-                "Sessão expirada. Por favor, faça login novamente.";
-              navigation.navigate("Login");
-              return;
-            } else if (apiResponse.message) {
-              errorMessage = apiResponse.message;
-            }
-
-            Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
-            setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
-            setBarcodeData(null);
-            setTimeout(() => {
-              setIsScanning(true);
-              setScanMessage("Escaneie a etiqueta");
-            }, 3000);
-            return;
           }
-        } catch (error) {
-          Alert.alert(
-            "Erro de conexão",
-            "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
-          );
-          setScanMessage("Erro de conexão. Tente novamente.");
+          
+          Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+          setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+          setBarcodeData(null);
           setTimeout(() => {
             setIsScanning(true);
             setScanMessage("Escaneie a etiqueta");
           }, 3000);
           return;
         }
+      } catch (error) {
+        console.error("Erro ao processar código de barras:", error);
+        Alert.alert(
+          "Erro de conexão",
+          "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
+        );
+        setScanMessage("Erro de conexão. Tente novamente.");
+        setTimeout(() => {
+          setIsScanning(true);
+          setScanMessage("Escaneie a etiqueta");
+        }, 3000);
+        return;
       }
-      if (isEntrada) {
-        try {
-          setScanMessage("Processando leitura...");
-          const response = await fetch(
-            `https://demo-polymer.meusalt.com.br/api/barcode-labels/${data}/recognize`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                user_id: parseInt(route.params?.userUser || "1"),
-                position_id: 1,
-                recognition_type: recognitionType,
-              }),
-            }
-          );
-
-          const apiResponse = await response.json();
-
-          if (response.ok && apiResponse.data?.barcode_label) {
-            setEtiquetaData((prev) => ({
-              ...prev,
-              etiqueta: data,
-              status: apiResponse.data.barcode_label.status || "1",
-            }));
-            if (isEntrada) {
-              setEtiquetaModalVisible(true);
-              setScanMessage("Confirme a etiqueta lida");
-            } else {
-              navigation.navigate("AprovacaoInfo", {
-                etiquetaData: {
-                  ...etiquetaData,
-                  etiqueta: data,
-                  status: apiResponse.data.barcode_label.status,
-                },
-                userUser: route.params?.userUser,
-              });
-            }
-            return;
-          } else {
-            let errorMessage = "Erro desconhecido ao processar a etiqueta.";
-
-            if (response.status === 404) {
-              navigation.navigate("ManualInput", {
-                scanType: scanType,
-                userUser: route.params?.userUser,
-              });
-              return;
-            } else if (response.status === 400) {
-              errorMessage = "Formato de etiqueta inválido.";
-            } else if (response.status === 401) {
-              errorMessage =
-                "Sessão expirada. Por favor, faça login novamente.";
-              navigation.navigate("Login");
-              return;
-            } else if (apiResponse.message) {
-              errorMessage = apiResponse.message;
-            }
-
-            Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
-            setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
-            setBarcodeData(null);
-            setTimeout(() => {
-              setIsScanning(true);
-              setScanMessage("Escaneie a etiqueta");
-            }, 3000);
-            return;
-          }
-        } catch (error) {
-          if (retryCount === maxRetries - 1) {
-            Alert.alert(
-              "Erro de conexão",
-              "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
-            );
-            setScanMessage("Erro de conexão. Tente novamente.");
-            setTimeout(() => {
-              setIsScanning(true);
-              setScanMessage("Escaneie a etiqueta");
-            }, 3000);
-            return;
-          }
-          retryCount++;
-        }
-
-        if (retryCount < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    } else {
+    }
+    
+    if (scanStep === "shelf") {
+      // Escaneamento da prateleira
+      setIsScanning(false);
       setShelfBarcode(data);
-      const newFailedShelfAttempts = failedShelfAttempts + 1;
-      setFailedShelfAttempts(newFailedShelfAttempts);
-
-      if (newFailedShelfAttempts >= 3) {
-        navigation.navigate("ManualInput", {
-          scanType: scanType,
-          userUser: route.params?.userUser,
-        });
-        setFailedShelfAttempts(0);
-      } else {
-        setShelfModalVisible(true);
-        setScanMessage("Confirme o código da prateleira");
-      }
+      setShelfModalVisible(true);
+      setScanMessage("Confirme o código da prateleira");
     }
   };
 
@@ -298,47 +205,99 @@ const Scanner = ({
     if (scanType === "entrada") {
       setScanStep("shelf");
       setScanMessage("Escaneie o código da prateleira");
+      setIsScanning(true);
+      // Limpar o código da prateleira para a nova leitura
+      setShelfBarcode(null);
     }
   };
 
-  const handleShelfConfirm = () => {
+  const handleShelfConfirm = async () => {
     const productBarcode = barcodeData || manualProductBarcode;
     if (!productBarcode || !shelfBarcode) {
       Alert.alert("Erro", "É necessário ler ambos os códigos.");
       return;
     }
     setShelfModalVisible(false);
-    const recognitionType = scanType === "entrada" ? 1 : 2;
+    setScanMessage("Processando...");
+    
+    try {
+      // Preparar os dados para a requisição
+      const recognitionType = scanType === "entrada" ? 1 : 2;
+      const requestData: RecognizeRequest = {
+        user_id: parseInt(route.params?.userUser || "1"),
+        position_id: parseInt(shelfBarcode),
+        recognition_type: recognitionType as 1 | 2 | 3,
+      };
+      
+      // Chamar a API para reconhecer o código de barras com a posição
+      const apiResponse = await recognizeBarcode(productBarcode, requestData);
 
-    // Simular chamada da API
-    const apiResponse = {
-      message: "Etiqueta reconhecida com sucesso.",
-      data: {
-        barcode_label: {
-          etiqueta: productBarcode,
-          status: recognitionType === 1 ? "1" : Math.random() > 0.5 ? "1" : "2",
-        },
-      },
-    };
-
-    navigation.navigate("EtiquetaInfo", {
-      etiquetaData: {
+    if (apiResponse.data?.barcode_label) {
+      // Atualizar os dados da etiqueta com a resposta da API
+      const updatedEtiquetaData = {
         ...etiquetaData,
         etiqueta: productBarcode,
         endereco: shelfBarcode,
-        status: apiResponse.data.barcode_label.status,
-      },
-      userUser: route.params?.userUser,
-    });
+        status: apiResponse.data.barcode_label.status || "1",
+        material: apiResponse.data.barcode_label.material || etiquetaData.material,
+        descricaoMaterial: apiResponse.data.barcode_label.descricaoMaterial || etiquetaData.descricaoMaterial,
+        op: apiResponse.data.barcode_label.op || etiquetaData.op,
+        qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
+        qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+        positionId: shelfBarcode,
+      };
+      
+      // Navegar para a tela de informações da etiqueta
+      navigation.navigate("EtiquetaInfo", {
+        etiquetaData: updatedEtiquetaData,
+        userUser: route.params?.userUser,
+        userName: route.params?.userName,
+        userEmail: route.params?.userEmail,
+      });
 
+      setBarcodeData(null);
+      setManualProductBarcode("");
+      setShelfBarcode(null);
+      setScanStep("product");
+      setScanMessage("Escaneie a etiqueta");
+    } else {
+      // Tratar erros da API
+      let errorMessage = apiResponse.message || "Erro desconhecido ao processar a etiqueta.";
+      
+      if (apiResponse.errors) {
+        // Formatar mensagens de erro se houver
+        const errorMessages = Object.values(apiResponse.errors)
+          .flat()
+          .join("\n");
+        errorMessage = errorMessages || errorMessage;
+      }
+      
+      Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+      setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+      setBarcodeData(null);
+      setShelfBarcode(null);
+      setTimeout(() => {
+        setIsScanning(true);
+        setScanMessage("Escaneie a etiqueta");
+      }, 3000);
+    }
+  } catch (error) {
+    console.error("Erro ao processar código de barras com prateleira:", error);
+    Alert.alert(
+      "Erro de conexão",
+      "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
+    );
+    setScanMessage("Erro de conexão. Tente novamente.");
     setBarcodeData(null);
-    setManualProductBarcode("");
     setShelfBarcode(null);
-    setScanStep("product");
-    setScanMessage("Escaneie a etiqueta");
+    setTimeout(() => {
+      setIsScanning(true);
+      setScanMessage("Escaneie a etiqueta");
+    }, 3000);
+  }
   };
 
-  const handleManualInput = () => {
+  const handleManualInput = async () => {
     if (
       !manualProductBarcode ||
       (scanType === "entrada" && !manualShelfBarcode)
@@ -347,35 +306,89 @@ const Scanner = ({
       return;
     }
 
-    const etiquetaDataWithBarcodes = {
-      ...etiquetaData,
-      etiqueta: manualProductBarcode,
-      endereco: manualShelfBarcode,
-    };
-
-    if (scanType === "entrada") {
-      navigation.navigate("EtiquetaInfo", {
-        etiquetaData: etiquetaDataWithBarcodes,
-        userUser: route.params?.userUser,
-      });
-    } else {
-      navigation.navigate("AprovacaoInfo", {
-        etiquetaData: etiquetaDataWithBarcodes,
-        userUser: route.params?.userUser,
-      });
-    }
-
     setManualInputModalVisible(false);
+    setScanMessage("Processando...");
+
+    try {
+      // Preparar os dados para a requisição
+      const recognitionType = scanType === "entrada" ? 1 : 2;
+      const requestData: RecognizeRequest = {
+        user_id: parseInt(route.params?.userUser || "1"),
+        position_id: scanType === "entrada" ? parseInt(manualShelfBarcode) : 1,
+        recognition_type: recognitionType as 1 | 2 | 3,
+      };
+      
+      // Chamar a API para reconhecer o código de barras
+      const apiResponse = await recognizeBarcode(manualProductBarcode, requestData);
+      
+      if (apiResponse.data?.barcode_label) {
+        // Atualizar os dados da etiqueta com a resposta da API
+        const updatedEtiquetaData = {
+          ...etiquetaData,
+          etiqueta: manualProductBarcode,
+          endereco: manualShelfBarcode,
+          status: apiResponse.data.barcode_label.status || "1",
+          material: apiResponse.data.barcode_label.material || etiquetaData.material,
+          descricaoMaterial: apiResponse.data.barcode_label.descricaoMaterial || etiquetaData.descricaoMaterial,
+          op: apiResponse.data.barcode_label.op || etiquetaData.op,
+          qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
+          qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+        };
+        
+        if (scanType === "entrada") {
+          navigation.navigate("EtiquetaInfo", {
+            etiquetaData: updatedEtiquetaData,
+            userUser: route.params?.userUser,
+            userName: route.params?.userName,
+            userEmail: route.params?.userEmail,
+          });
+        } else {
+          navigation.navigate("AprovacaoInfo", {
+            etiquetaData: updatedEtiquetaData,
+            userUser: route.params?.userUser,
+            userName: route.params?.userName,
+            userEmail: route.params?.userEmail,
+          });
+        }
+      } else {
+        // Tratar erros da API
+        let errorMessage = apiResponse.message || "Erro desconhecido ao processar a etiqueta.";
+        
+        if (apiResponse.errors) {
+          // Formatar mensagens de erro se houver
+          const errorMessages = Object.values(apiResponse.errors)
+            .flat()
+            .join("\n");
+          errorMessage = errorMessages || errorMessage;
+        }
+        
+        Alert.alert("Erro ao reconhecer etiqueta", errorMessage);
+        setScanMessage("Erro ao reconhecer etiqueta. Tente novamente.");
+      }
+    } catch (error) {
+      console.error("Erro ao processar código de barras manual:", error);
+      Alert.alert(
+        "Erro de conexão",
+        "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
+      );
+      setScanMessage("Erro de conexão. Tente novamente.");
+    }
+    
     setManualProductBarcode("");
     setManualShelfBarcode("");
   };
 
   // Função para voltar à tela inicial
   const goToHome = () => {
-    navigation.navigate("Home", { userUser: route.params?.userUser }); // Navega para a tela "Home" mantendo o usuário
+    // Navega para a tela "Home" mantendo todos os dados do usuário
+    navigation.navigate("Home", { 
+      userUser: route.params?.userUser,
+      userName: route.params?.userName,
+      userEmail: route.params?.userEmail
+    });
   };
 
-  // Garante que o userUser seja passado em todas as navegações
+  // Garante que todos os dados do usuário sejam passados em todas as navegações
   const navigateWithUser = (
     screen: keyof RootStackParamList,
     params: any = {}
@@ -383,6 +396,8 @@ const Scanner = ({
     navigation.navigate(screen, {
       ...params,
       userUser: route.params?.userUser,
+      userName: route.params?.userName,
+      userEmail: route.params?.userEmail,
     });
   };
 

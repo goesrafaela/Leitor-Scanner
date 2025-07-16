@@ -9,6 +9,9 @@ import {
   StyleSheet,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import iconImage from "../../img/img5.png";
 
@@ -17,41 +20,62 @@ const Login = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
+
   const handleLogin = () => {
-    if (name === "" || email === "") {
-      Alert.alert("Atenção", "Por favor, preencha todos os campos.");
-    } else {
-      /*Requisição para o servidor com os dados do usuário*/
-      navigation.navigate("Home", { userUser: name });
+    if (!name.trim()) {
+      Alert.alert("Atenção", "Por favor, digite seu nome.");
+      return;
     }
+    if (!email.trim()) {
+      Alert.alert("Atenção", "Por favor, digite seu email.");
+      return;
+    }
+    
+    // Navega para a Home com os dados digitados
+    navigation.navigate("Home", { 
+      userUser: "manual", 
+      userName: name,
+      userEmail: email 
+    });
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Image source={iconImage} style={styles.icon} resizeMode="contain" />
-        <Text style={styles.txtHome}>Bem vindo</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.content}>
+          <Image source={iconImage} style={styles.icon} resizeMode="contain" />
+          <Text style={styles.txtHome}>Bem vindo</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Digite seu nome"
-          value={name}
-          onChangeText={setName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Digite seu email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={{ textAlign: "center", color: "white" }}>Login</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <Text style={styles.selectUserText}>Digite seus dados:</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Nome"
+            value={name}
+            onChangeText={setName}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleLogin}
+          >
+            <Text style={styles.buttonText}>Entrar</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -59,6 +83,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+  },
+  scrollContainer: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -71,29 +98,39 @@ const styles = StyleSheet.create({
     height: 120,
     marginBottom: 30,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#282abd",
-    padding: 10,
-    borderRadius: 5,
-    width: "60%",
-    marginBottom: 20,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    color: "#000000",
+  selectUserText: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: "#333",
   },
   button: {
-    padding: 8,
-    width: "50%",
-    textAlign: "center",
+    padding: 12,
+    width: "60%",
     backgroundColor: "#282abd",
     marginTop: 12,
     borderRadius: 8,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   txtHome: {
     fontSize: 24,
     marginBottom: 25,
     color: "#282abd",
     fontWeight: "bold",
+  },
+  input: {
+    width: "80%",
+    backgroundColor: "white",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 12,
+    marginBottom: 15,
+    fontSize: 16,
   },
 });
 

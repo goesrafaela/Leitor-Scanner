@@ -1,13 +1,40 @@
 import axios from 'axios';
 
-const BASE_URL = 'https://demo-polymer.meusalt.com.br/api';
+export const BASE_URL = "https://demo-polymer.meusalt.com.br/api";
 
-const api = axios.create({
+export const api = axios.create({
     baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
 });
+
+// Interface para usuários
+export interface User {
+    id: number;
+    name: string;
+}
+
+// Cache para lista de usuários
+let usersCache: User[] | null = null;
+
+// Função para obter usuários da API
+export const getUsers = async (): Promise<User[]> => {
+    try {
+        // Se já temos os usuários em cache, retorna-os
+        if (usersCache && usersCache.length > 0) {
+            return usersCache;
+        }
+
+        // Caso contrário, busca da API
+        const response = await api.get<User[]>("/barcode-labels/users");
+        usersCache = response.data;
+        return usersCache;
+    } catch (error: any) {
+        console.error("Erro ao buscar usuários:", error);
+        return [];
+    }
+};
 
 export interface RecognizeResponse {
     message: string;
@@ -15,6 +42,11 @@ export interface RecognizeResponse {
         barcode_label: {
             etiqueta: string;
             status: string;
+            material?: string;
+            descricaoMaterial?: string;
+            op?: string;
+            qm?: string;
+            qtde?: string;
         };
         recognition: any;
     };
@@ -24,7 +56,14 @@ export interface RecognizeResponse {
 export interface RecognizeRequest {
     user_id: number;
     position_id: number;
-    recognition_type: 1 | 2 | 3;
+    recognition_type: 1 | 2 | 3; // 1=entrada, 2=saída, 3=movimentação
+}
+
+export interface LocationResponse {
+    positionId: string;
+    status: string;
+    quantity: string;
+    location: string;
 }
 
 export const recognizeBarcode = async (
@@ -41,8 +80,18 @@ export const recognizeBarcode = async (
         if (error.response) {
             return error.response.data;
         }
-        throw error;
+        return {
+            message: "Erro de conexão com o servidor"
+        };
     }
 };
 
-export default api;
+export const getLocation = async (barcode: string): Promise<LocationResponse | null> => {
+    try {
+        const response = await api.get<LocationResponse>(`/barcode-labels/${barcode}/location`);
+        return response.data;
+    } catch (error: any) {
+        console.error("Erro ao buscar localização:", error);
+        return null;
+    }
+};

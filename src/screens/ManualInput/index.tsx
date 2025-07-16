@@ -15,6 +15,8 @@ interface ManualInputProps {
     params?: {
       userUser?: string;
       scanType?: string;
+      userName?: string;
+      userEmail?: string;
     };
   };
 }
@@ -80,9 +82,19 @@ const ManualInput = ({ route }: ManualInputProps) => {
         };
 
         if (scanType === "entrada") {
-          navigation.navigate("EtiquetaInfo", { etiquetaData });
+          navigation.navigate("EtiquetaInfo", { 
+            etiquetaData,
+            userUser: route.params?.userUser,
+            userName: route.params?.userName,
+            userEmail: route.params?.userEmail
+          });
         } else {
-          navigation.navigate("AprovacaoInfo", { etiquetaData });
+          navigation.navigate("AprovacaoInfo", { 
+            etiquetaData,
+            userUser: route.params?.userUser,
+            userName: route.params?.userName,
+            userEmail: route.params?.userEmail
+          });
         }
       } else {
         Alert.alert(
@@ -123,7 +135,12 @@ const ManualInput = ({ route }: ManualInputProps) => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
-            onPress={() => navigation.navigate("Scanner")}
+            onPress={() => navigation.navigate("Scanner", {
+              userUser: route.params?.userUser,
+              userName: route.params?.userName,
+              userEmail: route.params?.userEmail,
+              scanType: route.params?.scanType
+            })}
           >
             <Text style={styles.buttonText}>Voltar</Text>
           </TouchableOpacity>

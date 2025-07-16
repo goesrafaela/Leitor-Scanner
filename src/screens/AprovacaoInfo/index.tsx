@@ -21,6 +21,8 @@ const AprovacaoInfo = () => {
   const route = useRoute();
   const etiquetaData = route.params?.etiquetaData as AprovacaoData;
   const userUser = route.params?.userUser;
+  const userName = route.params?.userName;
+  const userEmail = route.params?.userEmail;
 
   return (
     <View style={styles.container}>
@@ -92,7 +94,11 @@ const AprovacaoInfo = () => {
           <TouchableOpacity
             style={[styles.button, styles.backButton]}
             onPress={() =>
-              navigation.navigate("Scanner", { userName: userUser })
+              navigation.navigate("Scanner", { 
+                userUser: userUser,
+                userName: userName,
+                userEmail: userEmail
+              })
             }
           >
             <Text style={styles.buttonText}>Voltar</Text>

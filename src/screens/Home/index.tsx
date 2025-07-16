@@ -14,17 +14,24 @@ import iconImage from "../../img/img5.png";
 
 const Home = ({ route }) => {
   const navigation = useNavigation<RootStackNavigationProp>();
-  const userName = route.params?.userUser;
+  const userId = route.params?.userUser;
+  const userName = route.params?.userName || "Usuário";
+  const userEmail = route.params?.userEmail;
 
   return (
     <View style={styles.container}>
       <Image source={iconImage} style={styles.icon} resizeMode="contain" />
       <Text style={styles.txtHome}>Bem vindo</Text>
+      <Text style={styles.welcomeText}>Olá, {userName}</Text>
+      {userEmail && <Text style={styles.emailText}>{userEmail}</Text>}
+
       <TouchableOpacity
         style={styles.button}
         onPress={() =>
           navigation.navigate("Scanner", {
-            userUser: userName,
+            userUser: userId,
+            userName: userName,
+            userEmail: userEmail,
             scanType: "entrada",
           })
         }
@@ -36,7 +43,9 @@ const Home = ({ route }) => {
         style={styles.button}
         onPress={() =>
           navigation.navigate("Scanner", {
-            userUser: userName,
+            userUser: userId,
+            userName: userName,
+            userEmail: userEmail,
             scanType: "saida",
           })
         }
@@ -55,6 +64,17 @@ const Home = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
+  welcomeText: {
+    fontSize: 18,
+    marginBottom: 5,
+    color: "#333",
+    fontWeight: "bold",
+  },
+  emailText: {
+    fontSize: 14,
+    marginBottom: 20,
+    color: "#666",
+  },
   container: {
     flexDirection: "column",
     alignItems: "center",
