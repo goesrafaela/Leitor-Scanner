@@ -109,6 +109,8 @@ const Scanner = ({
         // Chamar a API para reconhecer o código de barras
         const apiResponse = await recognizeBarcode(data, requestData);
         
+
+        
         if (apiResponse.data?.barcode_label) {
           // Atualizar os dados da etiqueta com a resposta da API
           const updatedEtiquetaData = {
@@ -120,6 +122,10 @@ const Scanner = ({
             op: apiResponse.data.barcode_label.op || etiquetaData.op,
             qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
             qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+            // Usar informações da API de reconhecimento
+            positionId: apiResponse.data.barcode_label.positionId,
+            endereco: apiResponse.data.barcode_label.endereco,
+            descricaoEndereco: apiResponse.data.barcode_label.descricaoEndereco,
           };
           
           setEtiquetaData(updatedEtiquetaData);
@@ -232,6 +238,8 @@ const Scanner = ({
       // Chamar a API para reconhecer o código de barras com a posição
       const apiResponse = await recognizeBarcode(productBarcode, requestData);
 
+
+
     if (apiResponse.data?.barcode_label) {
       // Atualizar os dados da etiqueta com a resposta da API
       const updatedEtiquetaData = {
@@ -244,7 +252,8 @@ const Scanner = ({
         op: apiResponse.data.barcode_label.op || etiquetaData.op,
         qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
         qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
-        positionId: shelfBarcode,
+        positionId: apiResponse.data.barcode_label.positionId || shelfBarcode,
+        descricaoEndereco: apiResponse.data.barcode_label.descricaoEndereco,
       };
       
       // Navegar para a tela de informações da etiqueta
@@ -321,6 +330,8 @@ const Scanner = ({
       // Chamar a API para reconhecer o código de barras
       const apiResponse = await recognizeBarcode(manualProductBarcode, requestData);
       
+
+      
       if (apiResponse.data?.barcode_label) {
         // Atualizar os dados da etiqueta com a resposta da API
         const updatedEtiquetaData = {
@@ -333,6 +344,8 @@ const Scanner = ({
           op: apiResponse.data.barcode_label.op || etiquetaData.op,
           qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
           qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+          positionId: apiResponse.data.barcode_label.positionId || manualShelfBarcode,
+          descricaoEndereco: apiResponse.data.barcode_label.descricaoEndereco,
         };
         
         if (scanType === "entrada") {

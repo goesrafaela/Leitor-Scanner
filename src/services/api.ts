@@ -47,6 +47,10 @@ export interface RecognizeResponse {
             op?: string;
             qm?: string;
             qtde?: string;
+            positionId?: string;
+            endereco?: string;
+            descricaoEndereco?: string;
+            location?: string;
         };
         recognition: any;
     };
@@ -57,13 +61,6 @@ export interface RecognizeRequest {
     user_id: number;
     position_id: number;
     recognition_type: 1 | 2 | 3; // 1=entrada, 2=saída, 3=movimentação
-}
-
-export interface LocationResponse {
-    positionId: string;
-    status: string;
-    quantity: string;
-    location: string;
 }
 
 export const recognizeBarcode = async (
@@ -83,15 +80,5 @@ export const recognizeBarcode = async (
         return {
             message: "Erro de conexão com o servidor"
         };
-    }
-};
-
-export const getLocation = async (barcode: string): Promise<LocationResponse | null> => {
-    try {
-        const response = await api.get<LocationResponse>(`/barcode-labels/${barcode}/location`);
-        return response.data;
-    } catch (error: any) {
-        console.error("Erro ao buscar localização:", error);
-        return null;
     }
 };

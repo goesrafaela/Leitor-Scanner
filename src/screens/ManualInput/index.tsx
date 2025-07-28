@@ -72,12 +72,13 @@ const ManualInput = ({ route }: ManualInputProps) => {
             apiResponse.data?.barcode_label?.descricao_material ||
             "HOLDER PORTA DIANTEIRA LE 9.0",
           descricaoDeposito: "Almoxarifado",
-          descricaoEndereco: "CORREDOR [ A ] PRATE",
+          descricaoEndereco: apiResponse.data?.barcode_label?.descricaoEndereco || "CORREDOR [ A ] PRATE",
           origem: "11",
           depositoAtual: "09",
           op: apiResponse.data?.barcode_label?.op || "32487",
           qm: apiResponse.data?.barcode_label?.qm || "0",
           qtde: apiResponse.data?.barcode_label?.qtde || "100.0000",
+          positionId: apiResponse.data?.barcode_label?.positionId || (isEntrada ? shelfCode : "1"),
           userUser: route.params?.userUser,
         };
 

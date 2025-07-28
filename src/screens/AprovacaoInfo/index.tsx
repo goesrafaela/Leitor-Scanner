@@ -14,6 +14,10 @@ interface AprovacaoData {
   data: string;
   hora: string;
   operador: string;
+  endereco?: string;
+  positionId?: string;
+  descricaoEndereco?: string;
+  location?: string;
 }
 
 const AprovacaoInfo = () => {
@@ -46,6 +50,20 @@ const AprovacaoInfo = () => {
             <View style={styles.inputContainer}>
               <Text style={[styles.value, styles.approvedStatus]}>
                 APROVADO
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Localização:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.value}>
+                {etiquetaData.endereco || etiquetaData.positionId || "Não disponível"}
+              </Text>
+              <Text style={styles.valueDesc}>
+                {etiquetaData.descricaoEndereco || etiquetaData.location || ""}
               </Text>
             </View>
           </View>

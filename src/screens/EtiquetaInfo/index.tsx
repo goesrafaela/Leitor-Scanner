@@ -11,7 +11,6 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { RootStackNavigationProp } from "../../types/navigation";
 import {
-  getLocation,
   recognizeBarcode,
   RecognizeRequest,
 } from "../../services/api";
@@ -60,17 +59,28 @@ const EtiquetaInfo = () => {
 
     setIsLoading(true);
     try {
-      const locationData = await getLocation(searchBarcode);
+      // Usar a API de reconhecimento para obter informações do produto
+      const requestData: RecognizeRequest = {
+        user_id: parseInt(userUser || "1"),
+        position_id: 1, // Valor padrão para busca
+        recognition_type: 3, // Movimentação de estoque
+      };
 
-      if (locationData) {
+      const apiResponse = await recognizeBarcode(searchBarcode, requestData);
+
+      if (apiResponse.data?.barcode_label) {
         setEtiquetaData({
           ...etiquetaData,
           etiqueta: searchBarcode,
-          positionId: locationData.positionId,
-          endereco: locationData.positionId,
-          status: locationData.status,
-          qtde: locationData.quantity,
-          descricaoEndereco: locationData.location,
+          positionId: apiResponse.data.barcode_label.positionId || etiquetaData.positionId,
+          endereco: apiResponse.data.barcode_label.endereco || etiquetaData.endereco,
+          status: apiResponse.data.barcode_label.status || etiquetaData.status,
+          qtde: apiResponse.data.barcode_label.qtde || etiquetaData.qtde,
+          descricaoEndereco: apiResponse.data.barcode_label.descricaoEndereco || etiquetaData.descricaoEndereco,
+          material: apiResponse.data.barcode_label.material || etiquetaData.material,
+          descricaoMaterial: apiResponse.data.barcode_label.descricaoMaterial || etiquetaData.descricaoMaterial,
+          op: apiResponse.data.barcode_label.op || etiquetaData.op,
+          qm: apiResponse.data.barcode_label.qm || etiquetaData.qm,
         });
       } else {
         Alert.alert("Erro", "Produto não encontrado");
